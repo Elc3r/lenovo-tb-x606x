@@ -57,20 +57,17 @@ python3 scripts/prepare_blobs.py --root /path/to/lineage-build \
 
 ## Kernels and inherited blobs
 
-The Lineage device tree inherits a prebuilt kernel, DTB/DTBO and modules. TWRP
-imports the exact LTE kernel locally. Matching LTE Image.gz SHA256:
-`fb039df774989a7ca083b63ff77ef2b59c8e6f2352166777c5c82c0e8bd29bdc`.
-The recovered kernel identifies as 4.9.190+, built June 2022. A matching complete
-kernel-source release/build recipe has not been established in this preparation.
-This used/published prebuilt must not be conflated with the kernel extracted
-from the official September 2023 recovery archive above. The archive's boot and
-recovery kernels are byte-identical to each other, SHA256
+The Lineage device tree now selects the kernel and Wi-Fi module extracted from
+the official September 2023 recovery archive above. TWRP imports that exact LTE
+kernel through the pinned manifest. The archive's boot and recovery kernels
+are byte-identical to each other, SHA256
 `c9b07e553475373f27946b4c6e4cc03d634558cefc6d0900132a46ae1cd8d8dd`,
 and identify a September 2023 build of 4.9.190+. Their configuration and appended
-DTB match the used prebuilt, but their kernel image bytes differ. The September
-kernel was inspected for comparison; it is not the Image.gz selected by this
-port. Official firmware acquisition establishes that archive's origin, not a
-matching-source claim for the older upstream prebuilt.
+DTB match the previous June 2022 upstream prebuilt, but image bytes differ.
+The other seven modules match the official package byte-for-byte; DTB/DTBO
+remain inherited. Official firmware acquisition establishes origin, not a
+matching-source claim. Complete corresponding source/build instructions remain
+unresolved for both kernel versions. Previous inputs remain in Git history.
 Inherited recovery vendor libraries and X606F/FA prebuilts remain in upstream
 history. They are not relicensed by these repositories.
 

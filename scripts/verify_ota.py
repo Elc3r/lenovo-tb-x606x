@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import zipfile
 
+KERNEL_SHA256 = 'c9b07e553475373f27946b4c6e4cc03d634558cefc6d0900132a46ae1cd8d8dd'
 
 def require(condition, message):
     if not condition:
@@ -69,6 +70,11 @@ def reconstruct(archive, directory, partition, size):
 def boot_check(data):
     require(data[:8] == b'ANDROID!' and len(data) >= 1632, 'Invalid boot image')
     require(struct.unpack_from('<I', data, 40)[0] <= 2, 'Unsupported boot header')
+    size = struct.unpack_from('<I', data, 8)[0]
+    page = struct.unpack_from('<I', data, 36)[0]
+    require(page == 2048 and size > 0 and page + size <= len(data), 'Invalid kernel layout')
+    require(hashlib.sha256(data[page:page + size]).hexdigest() == KERNEL_SHA256,
+            'Wrong September 2023 kernel')
     command = (data[64:576].split(b'\0')[0] + b' ' + data[608:1632].split(b'\0')[0]).decode()
     args = command.split()
     require([v for v in args if v.startswith('androidboot.selinux=')] == ['androidboot.selinux=enforcing'], 'Boot must select Enforcing')
@@ -130,6 +136,20 @@ def main():
         command = boot_check(boot)
         record('boot.img', boot)
         vendor = reconstruct(archive, directory, 'vendor', 838860800)
+        module_hashes = {
+            'bt_drv.ko': '6c5ccb3f43966079f959e51e71d1d0bc0aa5bcf490f7bee6c9fdba76ff9452a5',
+            'fmradio_drv.ko': '564bf0b52a33463eca4cb722db4b3b778fc5d77ec860a16f53f4f5377137e644',
+            'fpsgo.ko': '02fa28ae3d18f6d153cdad3deb4c8054991fc99a99cc05196eacedf49ad625cc',
+            'gps_drv.ko': '0606a962e5dee27f1066ae18b5f505ffa69c70c995037299a9c5585b8ec0c798',
+            'met.ko': 'd25927a38aa575817557fc31c245d2b56dc143db8e55a3a590a18b7aaf057751',
+            'wlan_drv_gen4m.ko': '37364757d1d274cf9573d8a8102e26ffad643cb6c2a7435f598404bc2086d983',
+            'wmt_chrdev_wifi.ko': '98f741d845c91880f0d5dddc4cbef6b27bb57043548c339cd34a5e406f189371',
+            'wmt_drv.ko': 'c3bd67f61cb9d2aab26a228655dac800158a1d3fc9c273fb63a8f12e5121c25c',
+        }
+        for name, expected_hash in module_hashes.items():
+            content = read_file(vendor, '/lib/modules/' + name)
+            require(hashlib.sha256(content).hexdigest() == expected_hash, 'Wrong kernel module: ' + name)
+            record('vendor/lib/modules/' + name, content)
         system = reconstruct(archive, directory, 'system', 4085252096)
         def sysread(relative):
             # System-as-root layout used by this product.

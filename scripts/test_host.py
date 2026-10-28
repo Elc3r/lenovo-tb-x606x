@@ -11,6 +11,7 @@ import struct
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = None
@@ -31,12 +32,23 @@ blobs = load(HERE / 'scripts/prepare_blobs.py', 'blobs')
 
 class PortableTests(unittest.TestCase):
     def test_boot_flags(self):
-        data = bytearray(1660)
+        kernel = b'host-only-kernel-fixture'
+        with patch.object(ota, 'KERNEL_SHA256', hashlib.sha256(kernel).hexdigest()):
+            self.check_boot_flags(kernel)
+
+    def check_boot_flags(self, kernel):
+        data = bytearray(2048) + kernel
         data[:8] = b'ANDROID!'
+        struct.pack_into('<I', data, 8, len(kernel))
+        struct.pack_into('<I', data, 36, 2048)
         struct.pack_into('<I', data, 40, 2)
         text = b'androidboot.selinux=enforcing'
         data[64:64 + len(text)] = text
         self.assertIn('enforcing', ota.boot_check(bytes(data)))
+        damaged = bytearray(data)
+        damaged[-1] ^= 1
+        with self.assertRaisesRegex(ValueError, 'kernel'):
+            ota.boot_check(bytes(damaged))
         for text in [b'androidboot.selinux=permissive', b'androidboot.selinux=enforcing selinux=0',
                      b'androidboot.selinux=enforcing androidboot.selinux=permissive']:
             data[64:576] = text.ljust(512, b'\0')

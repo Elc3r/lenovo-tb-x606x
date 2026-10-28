@@ -26,7 +26,7 @@ The helper verifies the imported kernel, recognizes an already applied vold
 patch, selects twrp_X606X-eng, enforces VINTF and validates the packed image.
 It never runs fastboot/ADB. Output: out/target/product/X606X/recovery.img,
 at most 32 MiB. LTE kernel SHA256:
-`fb039df774989a7ca083b63ff77ef2b59c8e6f2352166777c5c82c0e8bd29bdc`.
+`c9b07e553475373f27946b4c6e4cc03d634558cefc6d0900132a46ae1cd8d8dd`.
 
 For a manual checkout using twrp-upstream-pinned.xml, add the recovery device
 repository separately. Supply KERNEL_SOURCE=/path/to/Image.gz, or set

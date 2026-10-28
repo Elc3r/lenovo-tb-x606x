@@ -53,8 +53,8 @@
     "project": "device/lenovo/achilles6_row_data",
     "base": "162ed79f078d29880d84491bc7f82f4e765f0f23",
     "patch": "patches/lineage/07-android_device_lenovo_achilles6_row_data.patch",
-    "sha256": "2ed5a7d2d878648722cd7dc29c0520b0544752f645edee04db35bcb1da68f348",
+    "sha256": "f191614f910953528ff31750bb74311dc7a73ade417a88bc6a865c30f10c4ef7",
     "tree": "lineage",
-    "integrated_revision": "f9b8c304be89d952679454c038edd6c6bec338af"
+    "integrated_revision": "4abb03ccbfbae0383d8251bc797aa2564726b193"
   }
 ]

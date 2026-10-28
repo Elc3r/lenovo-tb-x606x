@@ -1,9 +1,9 @@
 # Kernel provenance and outstanding source work
 
-The tested LineageOS and LTE TWRP builds use the same inherited prebuilt. No
-kernel replacement was made as part of this provenance investigation.
+LineageOS and LTE TWRP now select the same official September 2023 Lenovo
+prebuilt. The earlier June 2022 input remains available in Git history.
 
-## Used prebuilt
+## Previous prebuilt
 
 - Path: LTE device tree `prebuilt/Image.gz`.
 - SHA256: `fb039df774989a7ca083b63ff77ef2b59c8e6f2352166777c5c82c0e8bd29bdc`.
@@ -26,7 +26,26 @@ Both builds have identical embedded configuration and appended DTB. Their
 decompressed images have the same length (27,553,812 bytes), but differ outside
 the build banner. This is not merely a gzip or timestamp difference. Positional
 binary differences do not establish a count of source changes or security fixes.
-The 2023 kernel was inspected, not selected for this port.
+The September kernel is now selected for both LineageOS and TWRP. The matching
+Wi-Fi module replaces the older input; its source SHA256 is
+`858bf02b16a21e3b6fd795c31cbcea28a3863cf5442513ecbd08d2d298399f95`.
+The other seven kernel modules match the official package byte-for-byte.
+
+## Validation of the September selection
+
+On October 28, 2026, the local Lineage build passed actual OTA checks for the
+kernel, all eight stripped module payloads, Keymaster and existing policy gates.
+It was installed and booted; the collected audit reports Enforcing, all six
+required HALs registered, RIL running and successful Wi-Fi association. No new
+AVC combinations appeared relative to the preceding capture. These observations
+do not establish complete hardware functionality or cellular data performance.
+
+The local TWRP build passed packed-image validation (32,018,432 bytes, within
+the previously verified 32 MiB recovery partition). The user flashed/booted it;
+the recovery log confirms successful PIN/FBE decryption. Image SHA256:
+`62597bfb631ef452c736d28bfbb7aad6208676e78c7241552d021203e5063f52`.
+These tests used the development checkouts, not a fresh full remote build.
+No private device logs or generated ROM/recovery images are included here.
 
 ## Corresponding source remains unresolved
 

@@ -19,7 +19,10 @@ One device has been tested. Calls, SMS, VoLTE, emergency/ECM behavior, roaming,
 BIP and long-term stability are **not verified**. Recovery sideload has a known
 FunctionFS hang; use normal ADB push. Recovery itself is permissive. The old
 4.9.190+ prebuilt kernel/vendor are not made current by Enforcing: vendor SPL
-is `2022-05-05`, platform baseline reports `2025-03-05`.
+is `2022-05-05`, platform baseline reports `2025-03-05`. Both builds now select
+the official September 2023 Lenovo kernel, with the matching Wi-Fi module in
+LineageOS. Android boot/Wi-Fi/Enforcing and recovery PIN/FBE were checked after
+the switch; the full earlier hardware matrix was not repeated.
 
 See [full status](docs/STATUS.md), [installation](docs/INSTALL.md) and
 [source/binary provenance](docs/PROVENANCE.md). This is not official LineageOS
