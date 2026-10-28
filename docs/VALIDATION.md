@@ -69,3 +69,10 @@ covering a ready kernel without a Lineage checkout, explicit kernel import and
 early rejection of wrong local/source bytes. Git patch operations in those four
 tests are mocked. These bootstrap tests do not constitute a full platform sync,
 Android build or new hardware test.
+
+After the approved publication, both primary manifests also passed initialization
+directly from GitHub. Selected source projects were actually synced: the two
+Lineage device trees plus the auxiliary recovery input, and the TWRP device tree
+plus the auxiliary LTE input. The manifest-copied Beanpod/kernel hashes matched
+their pins and those project worktrees remained clean. The rest of each Android
+platform was not downloaded or built for this check.
