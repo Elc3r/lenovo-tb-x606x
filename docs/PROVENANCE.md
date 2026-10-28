@@ -25,8 +25,10 @@ Source firmware: `TB_X606X_S301085_230919_BMP.zip`, SHA256
 `de476c26c3c4f2da47cbe83113286720ae55ad854b9ebf35a1e4cf0ef31b7c87`.
 Path: `vendor/bin/hw/android.hardware.keymaster@4.0-service.beanpod`, SHA256
 `ac5bf57b05d791d900589d3786289077ac9ed666eae4af9f6101c734242a38a0`.
-The tested recovery tree contains an identical executable. The new common-tree
-copy is excluded from Git; obtain the matching input locally. No firmware archive
+The tested recovery tree contains an identical executable. The common tree does
+not track a duplicate; the primary pinned manifest supplies the matching input
+automatically from the recovery tree during repo sync. Alternative manifests or
+manual checkouts require providing the verified input locally. No firmware archive
 or newly added proprietary executable is bundled in the public source snapshot.
 
 ## Four vendor source normalizations
@@ -72,10 +74,12 @@ matching-source claim for the older upstream prebuilt.
 Inherited recovery vendor libraries and X606F/FA prebuilts remain in upstream
 history. They are not relicensed by these repositories.
 
-Publishing these source adaptations and redistributing compiled images are
-different deliverables. This preparation supplies neither vendor redistribution
-permission nor complete corresponding kernel source. Before a binary release,
-resolve those inputs and retain the relevant notices/source obligations.
+The inherited kernel binaries are already distributed in Git; the corresponding
+source question therefore applies now, not only to future ROM/recovery releases.
+This preparation supplies neither vendor redistribution permission nor complete
+corresponding kernel source. Attribution and a link to a different kernel version
+do not resolve that gap. See [kernel provenance](KERNEL_PROVENANCE.md) for the
+verified identities and outstanding source work.
 
 ## Excluded material
 
