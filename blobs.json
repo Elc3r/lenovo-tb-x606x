@@ -1,0 +1,42 @@
+[
+  {
+    "name": "keymaster-service",
+    "destination": "device/lenovo/mt6765-common/keymaster/android.hardware.keymaster@4.0-service.beanpod",
+    "firmware_path": "vendor/bin/hw/android.hardware.keymaster@4.0-service.beanpod",
+    "sha256": "ac5bf57b05d791d900589d3786289077ac9ed666eae4af9f6101c734242a38a0",
+    "bytes": 60584,
+    "mode": "0o755"
+  },
+  {
+    "name": "bin-bp_kmsetkey_ca",
+    "destination": "vendor/lenovo/mt6765-common/proprietary/vendor/bin/bp_kmsetkey_ca",
+    "firmware_path": "vendor/bin/bp_kmsetkey_ca",
+    "sha256": "9348a8d866d0d0821fd967cb60390cd51ab3986c6e45ca7ad011a70fd77f2ad9",
+    "bytes": 20608,
+    "mode": "0o755"
+  },
+  {
+    "name": "lib64-hw-kmsetkey.default.so",
+    "destination": "vendor/lenovo/mt6765-common/proprietary/vendor/lib64/hw/kmsetkey.default.so",
+    "firmware_path": "vendor/lib64/hw/kmsetkey.default.so",
+    "sha256": "be08a68e6c356276f957c5c033fe7722b81ac900473da89795a7fc25d9d0760c",
+    "bytes": 15504,
+    "mode": "0o644"
+  },
+  {
+    "name": "lib64-hw-kmsetkey.mt6765.so",
+    "destination": "vendor/lenovo/mt6765-common/proprietary/vendor/lib64/hw/kmsetkey.mt6765.so",
+    "firmware_path": "vendor/lib64/hw/kmsetkey.mt6765.so",
+    "sha256": "3dda1db28c53c718d81f5aebbf6d1b3ce2cc37c6fa1a0fc92bf7a6bc8dba8a03",
+    "bytes": 15504,
+    "mode": "0o644"
+  },
+  {
+    "name": "lib64-libTEECommon.so",
+    "destination": "vendor/lenovo/mt6765-common/proprietary/vendor/lib64/libTEECommon.so",
+    "firmware_path": "vendor/lib64/libTEECommon.so",
+    "sha256": "853e852e9845f06da407a333b7d2953aa81fede7f5e3313187f0ccbd05d86726",
+    "bytes": 28232,
+    "mode": "0o644"
+  }
+]

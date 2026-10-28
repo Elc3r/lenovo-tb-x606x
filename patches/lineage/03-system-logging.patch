@@ -1,0 +1,158 @@
+diff --git a/logd/auditctl.cpp b/logd/auditctl.cpp
+index 98bb02dbe3a2cb02181f7b72ccc193cfa3ada419..8d374b252645a78fe87952bfaab483ce425434a9 100644
+--- a/logd/auditctl.cpp
++++ b/logd/auditctl.cpp
+@@ -15,14 +15,110 @@
+  */
+ 
+ #include <android-base/parseint.h>
++#include <errno.h>
+ #include <error.h>
++#include <inttypes.h>
++#include <poll.h>
++#include <stddef.h>
+ #include <stdio.h>
+ #include <stdlib.h>
++#include <string.h>
++#include <time.h>
+ #include <unistd.h>
+ #include "libaudit.h"
+ 
+ static void usage(const char* cmdline) {
+-    fprintf(stderr, "Usage: %s [-r rate]\n", cmdline);
++    fprintf(stderr, "Usage: %s -s | -r rate\n", cmdline);
++}
++
++static int get_status(int fd, struct audit_status* status) {
++    struct nlmsghdr request = {};
++    request.nlmsg_len = NLMSG_LENGTH(0);
++    request.nlmsg_type = AUDIT_GET;
++    request.nlmsg_flags = NLM_F_REQUEST;
++    request.nlmsg_seq = 1;
++    struct sockaddr_nl kernel = {};
++    kernel.nl_family = AF_NETLINK;
++
++    struct timespec now;
++    if (clock_gettime(CLOCK_MONOTONIC, &now) < 0) return -errno;
++    const int64_t deadline = now.tv_sec * INT64_C(1000) + now.tv_nsec / 1000000 + 1000;
++
++    ssize_t sent = sendto(fd, &request, request.nlmsg_len, MSG_DONTWAIT,
++                          reinterpret_cast<struct sockaddr*>(&kernel), sizeof(kernel));
++    if (sent < 0) return -errno;
++    if (sent != static_cast<ssize_t>(request.nlmsg_len)) return -EPROTO;
++
++    struct pollfd pfd = {fd, POLLIN, 0};
++    for (;;) {
++        if (clock_gettime(CLOCK_MONOTONIC, &now) < 0) return -errno;
++        int64_t remaining = deadline - (now.tv_sec * INT64_C(1000) + now.tv_nsec / 1000000);
++        if (remaining <= 0) return -ETIMEDOUT;
++        int result = poll(&pfd, 1, static_cast<int>(remaining));
++        if (result < 0) {
++            if (errno == EINTR) continue;
++            return -errno;
++        }
++        if (result == 0) return -ETIMEDOUT;
++        if (pfd.revents != POLLIN) return -EIO;
++        break;
++    }
++
++    struct audit_message reply = {};
++    struct sockaddr_nl sender = {};
++    struct iovec iov = {&reply, sizeof(reply)};
++    struct msghdr message = {};
++    message.msg_name = &sender;
++    message.msg_namelen = sizeof(sender);
++    message.msg_iov = &iov;
++    message.msg_iovlen = 1;
++    ssize_t received = recvmsg(fd, &message, MSG_DONTWAIT);
++    if (received < 0) return -errno;
++    if (message.msg_flags & (MSG_TRUNC | MSG_CTRUNC)) return -EPROTO;
++    if (message.msg_namelen != sizeof(sender) || sender.nl_family != AF_NETLINK ||
++        sender.nl_pid != 0 || sender.nl_groups != 0) return -EPROTO;
++    if (received < static_cast<ssize_t>(sizeof(reply.nlh)) ||
++        reply.nlh.nlmsg_len != static_cast<size_t>(received) ||
++        reply.nlh.nlmsg_seq != request.nlmsg_seq || reply.nlh.nlmsg_flags != 0) return -EPROTO;
++
++    size_t payload_size = received - NLMSG_HDRLEN;
++    if (reply.nlh.nlmsg_type == NLMSG_ERROR) {
++        if (payload_size != sizeof(struct nlmsgerr)) return -EPROTO;
++        struct nlmsgerr error_reply;
++        memcpy(&error_reply, reply.data, sizeof(error_reply));
++        if (error_reply.msg.nlmsg_len != request.nlmsg_len ||
++            error_reply.msg.nlmsg_type != request.nlmsg_type ||
++            error_reply.msg.nlmsg_flags != request.nlmsg_flags ||
++            error_reply.msg.nlmsg_seq != request.nlmsg_seq ||
++            error_reply.msg.nlmsg_pid != request.nlmsg_pid ||
++            error_reply.error >= 0 || error_reply.error < -4095) return -EPROTO;
++        return error_reply.error;
++    }
++    if (reply.nlh.nlmsg_type != AUDIT_GET ||
++        payload_size < offsetof(struct audit_status, backlog) + sizeof(status->backlog)) {
++        return -EPROTO;
++    }
++    memset(status, 0, sizeof(*status));
++    memcpy(status, reply.data, payload_size < sizeof(*status) ? payload_size : sizeof(*status));
++    return 0;
++}
++
++static void do_get_status() {
++    int fd = audit_open();
++    if (fd == -1) {
++        error(EXIT_FAILURE, errno, "Unable to open audit socket");
++    }
++    struct audit_status status = {};
++    int result = get_status(fd, &status);
++    close(fd);
++    if (result < 0) {
++        error(EXIT_FAILURE, -result, "Can't get audit status");
++    }
++    printf("enabled %" PRIu32 "\nfailure %" PRIu32 "\npid %" PRIu32
++           "\nrate_limit %" PRIu32 "\nbacklog_limit %" PRIu32 "\nlost %" PRIu32
++           "\nbacklog %" PRIu32 "\n",
++           status.enabled, status.failure, status.pid, status.rate_limit, status.backlog_limit,
++           status.lost, status.backlog);
+ }
+ 
+ static void do_update_rate(uint32_t rate) {
+@@ -41,10 +137,14 @@ static void do_update_rate(uint32_t rate) {
+ int main(int argc, char* argv[]) {
+     uint32_t rate = 0;
+     bool update_rate = false;
++    bool query_status = false;
+     int opt;
+ 
+-    while ((opt = getopt(argc, argv, "r:")) != -1) {
++    while ((opt = getopt(argc, argv, "sr:")) != -1) {
+         switch (opt) {
++            case 's':
++                query_status = true;
++                break;
+             case 'r':
+                 if (!android::base::ParseUint<uint32_t>(optarg, &rate)) {
+                     error(EXIT_FAILURE, errno, "Invalid Rate");
+@@ -57,10 +157,12 @@ int main(int argc, char* argv[]) {
+         }
+     }
+ 
+-    // In the future, we may add other options to auditctl
+-    // so this if statement will expand.
+-    // if (!update_rate && !update_backlog && !update_whatever) ...
+-    if (!update_rate) {
++    if (optind != argc || (query_status && update_rate)) {
++        usage(argv[0]);
++        exit(EXIT_FAILURE);
++    }
++
++    if (!update_rate && !query_status) {
+         fprintf(stderr, "Nothing to do\n");
+         usage(argv[0]);
+         exit(EXIT_FAILURE);
+@@ -68,6 +170,8 @@ int main(int argc, char* argv[]) {
+ 
+     if (update_rate) {
+         do_update_rate(rate);
++    } else {
++        do_get_status();
+     }
+ 
+     return 0;

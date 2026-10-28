@@ -1,0 +1,4 @@
+diff --git a/jni/fmr/Android.mk b/jni/fmr/Android.mk.disabled
+similarity index 100%
+rename from jni/fmr/Android.mk
+rename to jni/fmr/Android.mk.disabled

@@ -1,0 +1,734 @@
+diff --git a/libc/bionic/system_property_api.cpp b/libc/bionic/system_property_api.cpp
+index a641f12a850a48ebb67ea99980ab395fcda6fdd5..72f98ee53c9d05b56fc8e66a73b238a889b17c71 100644
+--- a/libc/bionic/system_property_api.cpp
++++ b/libc/bionic/system_property_api.cpp
+@@ -92,6 +92,21 @@ int __system_property_update(prop_info* pi, const char* value, unsigned int len)
+   return system_properties.Update(pi, value, len);
+ }
+ 
++
++int __system_property_initialize_ecm_snapshot() {
++  return system_properties.InitializeEcmSnapshot() ? 0 : -1;
++}
++
++int __system_property_set_ecm_snapshot(const char* value, unsigned int len,
++                                      int* alias_changed) {
++  if (alias_changed == nullptr) return -1;
++  *alias_changed = 0;
++  const auto result = system_properties.SetEcmSnapshot(value, len);
++  if (result.status != ecm_export::Status::Ok) return -1;
++  *alias_changed = result.alias_changed ? 1 : 0;
++  return 0;
++}
++
+ __BIONIC_WEAK_FOR_NATIVE_BRIDGE
+ int __system_property_add(const char* name, unsigned int namelen, const char* value,
+                           unsigned int valuelen) {
+diff --git a/libc/include/sys/_system_properties.h b/libc/include/sys/_system_properties.h
+index 744a45b71f5ef9cca938687c9cfb511eb85820ad..709e2149ce971ffca57bcf753a3500b4376a032f 100644
+--- a/libc/include/sys/_system_properties.h
++++ b/libc/include/sys/_system_properties.h
+@@ -114,6 +114,15 @@ int __system_property_add(const char* __name, unsigned int __name_length, const
+ */
+ int __system_property_update(prop_info* __pi, const char* __value, unsigned int __value_length);
+ 
++/* Fixed platform-owned ECM snapshot transaction. PRIVATE; not a vendor/NDK API.
++ * Caller is the serialized property-area owner. No arbitrary key arguments.
++ * Returns 0 after both stores commit, -1 before canonical mutation on failure.
++ */
++int __system_property_set_ecm_snapshot(const char* __value, unsigned int __value_length,
++                                      int* __alias_changed);
++int __system_property_initialize_ecm_snapshot(void);
++
++
+ /* Read the serial number of a system property returned by
+ ** __system_property_find.
+ **
+diff --git a/libc/libc.map.txt b/libc/libc.map.txt
+index c31e306819da7f9acdadfe66fbcd767dddf33ee1..6a8878db97199d1101892a152394ed305308c4ea 100644
+--- a/libc/libc.map.txt
++++ b/libc/libc.map.txt
+@@ -1566,6 +1566,9 @@ LIBC_S { # introduced=S
+ 
+ LIBC_PRIVATE {
+   global:
++    __system_property_set_ecm_snapshot; # platform-only, fixed-key transport
++    __system_property_initialize_ecm_snapshot; # platform-only readiness
++
+     __accept4; # arm x86
+     __adddf3; # arm
+     __addsf3; # arm
+diff --git a/libc/system_properties/Android.bp b/libc/system_properties/Android.bp
+index af8bda9f73c97c255d3cbe8e01fcc6f5d0e8a7f5..c008cc23e4cbeaec4b475602c981ce603e4bdf1b 100644
+--- a/libc/system_properties/Android.bp
++++ b/libc/system_properties/Android.bp
+@@ -10,6 +10,11 @@ package {
+ 
+ cc_library_static {
+     name: "libsystemproperties",
++    product_variables: {
++        debuggable: {
++            cflags: ["-DLINEAGE_PROPERTY_AUDIT"],
++        },
++    },
+     defaults: ["libc_defaults"],
+     native_bridge_supported: true,
+     srcs: [
+@@ -19,6 +24,7 @@ cc_library_static {
+         "prop_area.cpp",
+         "prop_info.cpp",
+         "system_properties.cpp",
++        "vt_property_audit.cpp",
+     ],
+     whole_static_libs: [
+         "libpropertyinfoparser",
+diff --git a/libc/system_properties/context_node.cpp b/libc/system_properties/context_node.cpp
+index d392c0ad509e88d6b27474ecb9cc08c1af07714a..228000c32722f31fe7449139270e93d7f20f02f8 100644
+--- a/libc/system_properties/context_node.cpp
++++ b/libc/system_properties/context_node.cpp
+@@ -35,6 +35,11 @@
+ 
+ #include "system_properties/system_properties.h"
+ 
++#if defined(LINEAGE_PROPERTY_AUDIT)
++#include <string.h>
++#include "system_properties/vt_property_audit.h"
++#endif
++
+ // pthread_mutex_lock() calls into system_properties in the case of contention.
+ // This creates a risk of dead lock if any system_properties functions
+ // use pthread locks after system_property initialization.
+@@ -43,6 +48,11 @@
+ // allocation of memory for each filename.
+ 
+ bool ContextNode::Open(bool access_rw, bool* fsetxattr_failed) {
++#if defined(LINEAGE_PROPERTY_AUDIT)
++  if (strcmp(context_, "u:object_r:vendor_default_prop:s0") == 0) {
++    TraceVtPropertyRoute(VtPropertyAuditOperation::VendorOpen);
++  }
++#endif
+   lock_.lock();
+   if (pa_) {
+     lock_.unlock();
+@@ -84,6 +94,11 @@ void ContextNode::ResetAccess() {
+ }
+ 
+ bool ContextNode::CheckAccess() {
++#if defined(LINEAGE_PROPERTY_AUDIT)
++  if (strcmp(context_, "u:object_r:vendor_default_prop:s0") == 0) {
++    TraceVtPropertyRoute(VtPropertyAuditOperation::VendorCheck);
++  }
++#endif
+   char filename[PROP_FILENAME_MAX];
+   int len = async_safe_format_buffer(filename, sizeof(filename), "%s/%s", filename_, context_);
+   if (len < 0 || len >= PROP_FILENAME_MAX) {
+diff --git a/libc/system_properties/contexts_serialized.cpp b/libc/system_properties/contexts_serialized.cpp
+index 6ccd46c992558e4b335b1892b4ca57e0ffb869f0..c9a1b4f9f20cd9b4a4fbbdda32d44133e1f1c04e 100644
+--- a/libc/system_properties/contexts_serialized.cpp
++++ b/libc/system_properties/contexts_serialized.cpp
+@@ -37,6 +37,15 @@
+ 
+ #include <new>
+ 
++#if defined(LINEAGE_PROPERTY_AUDIT)
++#include <stdatomic.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include "private/ErrnoRestorer.h"
++#include "system_properties/vt_property_audit.h"
++#endif
++
+ #include <async_safe/log.h>
+ 
+ #include "system_properties/system_properties.h"
+@@ -96,6 +105,9 @@ bool ContextsSerialized::InitializeProperties() {
+ }
+ 
+ bool ContextsSerialized::Initialize(bool writable, const char* filename, bool* fsetxattr_failed) {
++#if defined(LINEAGE_PROPERTY_AUDIT)
++  TraceVtPropertyRoute(VtPropertyAuditOperation::SerializedInit);
++#endif
+   filename_ = filename;
+   if (!InitializeProperties()) {
+     return false;
+@@ -127,6 +139,9 @@ bool ContextsSerialized::Initialize(bool writable, const char* filename, bool* f
+ }
+ 
+ prop_area* ContextsSerialized::GetPropAreaForName(const char* name) {
++#if defined(LINEAGE_PROPERTY_AUDIT)
++  TraceVtPropertyRoute(VtPropertyAuditOperation::NamedLookup);
++#endif
+   uint32_t index;
+   property_info_area_file_->GetPropertyInfoIndexes(name, &index, nullptr);
+   if (index == ~0u || index >= num_context_nodes_) {
+@@ -135,7 +150,78 @@ prop_area* ContextsSerialized::GetPropAreaForName(const char* name) {
+     return nullptr;
+   }
+   auto* context_node = &context_nodes_[index];
++#if defined(LINEAGE_PROPERTY_AUDIT)
++  const char* context = context_node->context();
++  const bool vt_trace = IsVtPropertyAuditTarget();
++  if (vt_trace || strcmp(context, "u:object_r:default_prop:s0") == 0 ||
++      strcmp(context, "u:object_r:vendor_default_prop:s0") == 0 ||
++      strcmp(context, "u:object_r:vendor_codec_pipeline_prop:s0") == 0 ||
++      strcmp(context, "u:object_r:vendor_display_pipeline_prop:s0") == 0 ||
++      strcmp(context, "u:object_r:vendor_camera_dump_control_prop:s0") == 0 ||
++      strcmp(context, "u:object_r:vendor_omx_core_log_prop:s0") == 0 ||
++      strcmp(context, "u:object_r:vendor_vt_video_support_prop:s0") == 0 ||
++      strcmp(context, "u:object_r:init_service_status_private_prop:s0") == 0 ||
++      strcmp(context, "u:object_r:net_dns_prop:s0") == 0 ||
++      strcmp(context, "u:object_r:radio_cdma_ecm_prop:s0") == 0 ||
++      strcmp(context, "u:object_r:mt6765_ecm_snapshot_prop:s0") == 0) {
++    ErrnoRestorer errno_restorer;
++    const char* enabled = vt_trace ? nullptr : getenv("LINEAGE_PROPERTY_AUDIT");
++    if (vt_trace || (enabled != nullptr && strcmp(enabled, "1") == 0)) {
++      struct AuditEntry {
++        atomic_uint state;
++        uint32_t context_index;
++        char name[128];
++      };
++      static AuditEntry entries[128] = {};
++      static atomic_bool long_name_reported = false;
++      static atomic_bool capacity_reported = false;
++      const size_t name_length = strnlen(name, sizeof(entries[0].name));
++      bool recorded = false;
++      bool duplicate = false;
++      if (name_length < sizeof(entries[0].name)) {
++        for (auto& entry : entries) {
++          if (atomic_load_explicit(&entry.state, memory_order_acquire) == 2 &&
++              entry.context_index == index && strcmp(entry.name, name) == 0) {
++            duplicate = true;
++            break;
++          }
++        }
++        if (!duplicate) {
++          for (size_t slot = 0; slot < sizeof(entries) / sizeof(entries[0]); ++slot) {
++            auto& entry = entries[slot];
++            unsigned int empty = 0;
++            if (atomic_compare_exchange_strong_explicit(&entry.state, &empty, 1,
++                                                       memory_order_relaxed,
++                                                       memory_order_relaxed)) {
++              entry.context_index = index;
++              memcpy(entry.name, name, name_length + 1);
++              atomic_store_explicit(&entry.state, 2, memory_order_release);
++              async_safe_format_log(ANDROID_LOG_INFO, "property_audit",
++                                    "lookup name=%s context=%s sequence=%u limit=128 mode=distinct",
++                                    name, context, static_cast<unsigned int>(slot + 1));
++              recorded = true;
++              break;
++            }
++          }
++        }
++        if (!recorded && !duplicate &&
++            !atomic_exchange_explicit(&capacity_reported, true, memory_order_relaxed)) {
++          async_safe_format_log(ANDROID_LOG_INFO, "property_audit",
++                                "incomplete reason=capacity limit=128 mode=distinct");
++        }
++      } else if (!atomic_exchange_explicit(&long_name_reported, true, memory_order_relaxed)) {
++        async_safe_format_log(ANDROID_LOG_INFO, "property_audit",
++                              "incomplete reason=name-too-long max_name_bytes=127 mode=distinct");
++      }
++    }
++  }
++#endif
+   if (!context_node->pa()) {
++#if defined(LINEAGE_PROPERTY_AUDIT)
++    if (strcmp(context_node->context(), "u:object_r:vendor_default_prop:s0") == 0) {
++      TraceVtPropertyRoute(VtPropertyAuditOperation::NamedVendorOpen);
++    }
++#endif
+     // We explicitly do not check no_access_ in this case because unlike the
+     // case of foreach(), we want to generate an selinux audit for each
+     // non-permitted property access in this function.
+@@ -145,7 +231,15 @@ prop_area* ContextsSerialized::GetPropAreaForName(const char* name) {
+ }
+ 
+ void ContextsSerialized::ForEach(void (*propfn)(const prop_info* pi, void* cookie), void* cookie) {
++#if defined(LINEAGE_PROPERTY_AUDIT)
++  TraceVtPropertyRoute(VtPropertyAuditOperation::ForEach);
++#endif
+   for (size_t i = 0; i < num_context_nodes_; ++i) {
++#if defined(LINEAGE_PROPERTY_AUDIT)
++    if (strcmp(context_nodes_[i].context(), "u:object_r:vendor_default_prop:s0") == 0) {
++      TraceVtPropertyRoute(VtPropertyAuditOperation::ForEachVendor);
++    }
++#endif
+     if (context_nodes_[i].CheckAccessAndOpen()) {
+       context_nodes_[i].pa()->foreach (propfn, cookie);
+     }
+@@ -153,7 +247,15 @@ void ContextsSerialized::ForEach(void (*propfn)(const prop_info* pi, void* cooki
+ }
+ 
+ void ContextsSerialized::ResetAccess() {
++#if defined(LINEAGE_PROPERTY_AUDIT)
++  TraceVtPropertyRoute(VtPropertyAuditOperation::ResetAccess);
++#endif
+   for (size_t i = 0; i < num_context_nodes_; ++i) {
++#if defined(LINEAGE_PROPERTY_AUDIT)
++    if (strcmp(context_nodes_[i].context(), "u:object_r:vendor_default_prop:s0") == 0) {
++      TraceVtPropertyRoute(VtPropertyAuditOperation::ResetVendor);
++    }
++#endif
+     context_nodes_[i].ResetAccess();
+   }
+ }
+diff --git a/libc/system_properties/include/system_properties/ecm_export_coordinator.h b/libc/system_properties/include/system_properties/ecm_export_coordinator.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..eac865a419ae5fbc2a383423192c14cd27dff44a
+--- /dev/null
++++ b/libc/system_properties/include/system_properties/ecm_export_coordinator.h
+@@ -0,0 +1,108 @@
++// Fixed ECM snapshot coordinator. Caller must own all property-area mutations.
++#pragma once
++
++#include <stddef.h>
++#include <stdint.h>
++#include <string.h>
++
++namespace ecm_export {
++// Bionic builds without C++ standard-library headers. Used only in unevaluated contexts.
++template <class T> T&& Declval() noexcept;
++inline constexpr char kCanonical[] = "ril.cdma.inecmmode";
++inline constexpr char kAlias[] = "sys.radio.ecm_v1";
++inline constexpr size_t kCapacity = 92;  // Must static_assert against PROP_VALUE_MAX in Bionic.
++
++// The low 24 bits are a mutable update counter, including bit16. is_long()
++// interprets that bit as a flag ONLY for ro.* properties, never these fixed keys.
++inline constexpr bool ValidMutableSerial(uint32_t serial) noexcept {
++  return !(serial & 1u) && (serial >> 24) < kCapacity;
++}
++
++struct Value {
++  char bytes[kCapacity]{};
++  size_t size = 0;
++
++  // Input retains embedded NUL. Canonical Add and Update have different old semantics.
++  bool Assign(const char* data, size_t length) noexcept {
++    if (length >= kCapacity || (length && !data)) return false;
++    if (length) ::memcpy(bytes, data, length);
++    bytes[length] = 0;
++    size = length;
++    return true;
++  }
++  // Canonical Update may retain old bytes, including a nonzero byte at [length].
++  // Snapshot exact storage; never infer length with strlen or coerce its terminator.
++  void CopyStored(const char* data, size_t length) noexcept {
++    ::memcpy(bytes, data, length + 1);
++    size = length;
++  }
++  bool operator==(const Value& other) const noexcept {
++    return size == other.size && ::memcmp(bytes, other.bytes, size) == 0;
++  }
++};
++
++enum class Target { Canonical, Alias };
++enum class Status { Ok, Unhandled, AliasRejected, InvalidValue, StorageError };
++struct Result {
++  Status status;
++  bool alias_changed = false;
++  Value stored{};  // Actual canonical declared payload for post-commit notifications.
++};
++
++// Backend contract (NOT established by mock tests):
++// * The caller holds the SAME all-mutator lock across this entire call and notifications.
++// * No context reset, remap, AreaInit, Init/ResetAccess, or direct mutator may interleave.
++// * Snapshot reads canonical, never alias. Missing canonical is represented by empty Value.
++// * ReserveAlias initializes absent/existing alias to old canonical bytes; any error leaves
++//   canonical unchanged. It may leave alias reserved/reconciled to old bytes on later failure.
++// * PrepareUpdate pins the actual prop_info, matching area, serial area, and length; no mutation.
++// * PrepareAdd pins canonical area/serial area and validates name/length before AddCanonical.
++// * AddCanonical failure occurs before publishing canonical prop_info/value (trie allocation
++//   may be consumed). Success publishes the requested bytes, with no fallible step remaining.
++// * CommitCanonical preserves old strlcpy Update semantics, then copies actual storage into next.
++// * Commit is a VOID noexcept exact length+1 copy for alias. No lookup,
++//   allocation, callback, validation, logging, rollback, exceptions, or recoverable failure.
++// * Plans are transaction-local; no reuse after releasing the lock or resetting contexts.
++template <class Backend>
++Result Store(Backend& storage, const char* key, const char* data, size_t length) noexcept {
++  static_assert(__is_same(decltype(Declval<Backend&>().Commit(
++      Declval<const typename Backend::Plan&>(), Declval<const Value&>())), void));
++  static_assert(noexcept(Declval<Backend&>().Commit(
++      Declval<const typename Backend::Plan&>(), Declval<const Value&>())));
++  static_assert(__is_same(decltype(Declval<Backend&>().CommitCanonical(
++      Declval<const typename Backend::Plan&>(), Declval<Value&>())), void));
++  static_assert(noexcept(Declval<Backend&>().CommitCanonical(
++      Declval<const typename Backend::Plan&>(), Declval<Value&>())));
++  if (::strcmp(key, kAlias) == 0) return {Status::AliasRejected};
++  if (::strcmp(key, kCanonical) != 0) return {Status::Unhandled};
++  Value next;
++  if (!next.Assign(data, length)) return {Status::InvalidValue};
++  Value old;
++  bool exists = false;
++  bool reserved_changed = false;
++  typename Backend::Plan source{}, alias{};
++  if (!storage.Snapshot(old, exists) || !storage.ReserveAlias(old, reserved_changed) ||
++      !storage.PrepareUpdate(Target::Alias, next, alias)) return {Status::StorageError};
++  if (exists) {
++    if (!storage.PrepareUpdate(Target::Canonical, next, source)) return {Status::StorageError};
++    // ALL fallible operations precede the first canonical byte change.
++    storage.CommitCanonical(source, next);
++  } else {
++    if (!storage.PrepareAdd(next, source) || !storage.AddCanonical(source, next))
++      return {Status::StorageError};
++    // Add published canonical. No lookup/preflight/fallible Update is permitted from here.
++  }
++  storage.Commit(alias, next);
++  return {Status::Ok, reserved_changed || !(old == next), next};
++}
++
++// Invoke under the same all-mutator lock, AFTER Store returns, before acknowledgement.
++// Sink must enqueue in order without re-entering any property mutator. Production service
++// retains its existing canonical notifications (including identical writes).
++template <class Sink>
++void Notify(const Result& result, bool active, Sink& sink) noexcept {
++  if (result.status != Status::Ok || !active) return;
++  sink.Canonical(result.stored);
++  if (result.alias_changed) sink.Alias(result.stored);
++}
++}  // namespace ecm_export
+diff --git a/libc/system_properties/include/system_properties/system_properties.h b/libc/system_properties/include/system_properties/system_properties.h
+index 0666e2803490233e1cf3d1616d863aa11b900a56..959d10814c2bd7946b22bedc8e422a9966fdf9e4 100644
+--- a/libc/system_properties/include/system_properties/system_properties.h
++++ b/libc/system_properties/include/system_properties/system_properties.h
+@@ -32,6 +32,7 @@
+ #include <sys/param.h>
+ #include <sys/system_properties.h>
+ 
++#include "ecm_export_coordinator.h"
+ #include "contexts.h"
+ #include "contexts_pre_split.h"
+ #include "contexts_serialized.h"
+@@ -66,6 +67,13 @@ class SystemProperties {
+   int Get(const char* name, char* value);
+   int Update(prop_info* pi, const char* value, unsigned int len);
+   int Add(const char* name, unsigned int namelen, const char* value, unsigned int valuelen);
++  // INACTIVE proposal: caller holds all-mutator lock; contexts remain pinned.
++  // Service must authorize canonical, reject alias, notify after success, and
++  // prevent canonical Add/Update bypass when this candidate is selected.
++  ecm_export::Result SetEcmSnapshot(const char* value, size_t length) noexcept;
++  // Once after defaults, before RIL, under the same all-mutator exclusion.
++  // Storage result only: init retains separate sticky startup-default failure.
++  bool InitializeEcmSnapshot() noexcept;
+   uint32_t WaitAny(uint32_t old_serial);
+   bool Wait(const prop_info* pi, uint32_t old_serial, uint32_t* new_serial_ptr,
+             const timespec* relative_timeout);
+@@ -73,6 +81,12 @@ class SystemProperties {
+   int Foreach(void (*propfn)(const prop_info* pi, void* cookie), void* cookie);
+ 
+  private:
++  class EcmStorage;
++  int AddInternal(const char* name, unsigned int namelen, const char* value,
++                  unsigned int valuelen);
++  template <bool exact_bytes>
++  static void CommitUpdate(prop_info* pi, prop_area* pa, prop_area* serial_pa,
++                           const char* value, unsigned int len) noexcept;
+   uint32_t ReadMutablePropertyValue(const prop_info* pi, char* value);
+ 
+   // We don't want to use new or malloc in properties (b/31659220), and we don't want to waste a
+diff --git a/libc/system_properties/include/system_properties/vt_property_audit.h b/libc/system_properties/include/system_properties/vt_property_audit.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..dfd5f5156cc5be50207034ff0ed0f47113e66a5f
+--- /dev/null
++++ b/libc/system_properties/include/system_properties/vt_property_audit.h
+@@ -0,0 +1,18 @@
++#pragma once
++
++#if defined(LINEAGE_PROPERTY_AUDIT)
++enum class VtPropertyAuditOperation {
++  SerializedInit,
++  NamedLookup,
++  ForEach,
++  ResetAccess,
++  NamedVendorOpen,
++  ForEachVendor,
++  ResetVendor,
++  VendorCheck,
++  VendorOpen,
++};
++
++bool IsVtPropertyAuditTarget();
++void TraceVtPropertyRoute(VtPropertyAuditOperation operation);
++#endif
+diff --git a/libc/system_properties/system_properties.cpp b/libc/system_properties/system_properties.cpp
+index 1cb15c3df5240d252ceb49d7a9212f1f634b279e..185d3a3c919802ce1d3c57eee4df5bf6a6c6c58a 100644
+--- a/libc/system_properties/system_properties.cpp
++++ b/libc/system_properties/system_properties.cpp
+@@ -226,25 +226,9 @@ int SystemProperties::Get(const char* name, char* value) {
+   }
+ }
+ 
+-int SystemProperties::Update(prop_info* pi, const char* value, unsigned int len) {
+-  if (len >= PROP_VALUE_MAX) {
+-    return -1;
+-  }
+-
+-  if (!initialized_) {
+-    return -1;
+-  }
+-
+-  prop_area* serial_pa = contexts_->GetSerialPropArea();
+-  if (!serial_pa) {
+-    return -1;
+-  }
+-  prop_area* pa = contexts_->GetPropAreaForName(pi->name);
+-  if (__predict_false(!pa)) {
+-    async_safe_format_log(ANDROID_LOG_ERROR, "libc", "Could not find area for \"%s\"", pi->name);
+-    return -1;
+-  }
+-
++template <bool exact_bytes>
++void SystemProperties::CommitUpdate(prop_info* pi, prop_area* pa, prop_area* serial_pa,
++                                    const char* value, unsigned int len) noexcept {
+   uint32_t serial = atomic_load_explicit(&pi->serial, memory_order_relaxed);
+   unsigned int old_len = SERIAL_VALUE_LEN(serial);
+ 
+@@ -256,7 +240,11 @@ int SystemProperties::Update(prop_info* pi, const char* value, unsigned int len)
+   atomic_thread_fence(memory_order_release);
+   serial |= 1;
+   atomic_store_explicit(&pi->serial, serial, memory_order_relaxed);
+-  strlcpy(pi->value, value, len + 1);
++  if constexpr (exact_bytes) {
++    memcpy(pi->value, value, len + 1);
++  } else {
++    strlcpy(pi->value, value, len + 1);
++  }
+   // Now the primary value property area is up-to-date. Let readers know that they should
+   // look at the property value instead of the backup area.
+   atomic_thread_fence(memory_order_release);
+@@ -267,11 +255,40 @@ int SystemProperties::Update(prop_info* pi, const char* value, unsigned int len)
+                         memory_order_release);
+   __futex_wake(serial_pa->serial(), INT32_MAX);
+ 
++}
++
++int SystemProperties::Update(prop_info* pi, const char* value, unsigned int len) {
++  if (len >= PROP_VALUE_MAX) {
++    return -1;
++  }
++
++  if (!initialized_) {
++    return -1;
++  }
++
++  prop_area* serial_pa = contexts_->GetSerialPropArea();
++  if (!serial_pa) {
++    return -1;
++  }
++  if (strcmp(pi->name, ecm_export::kAlias) == 0) return -1;
++  prop_area* pa = contexts_->GetPropAreaForName(pi->name);
++  if (__predict_false(!pa)) {
++    async_safe_format_log(ANDROID_LOG_ERROR, "libc", "Could not find area for \"%s\"", pi->name);
++    return -1;
++  }
++
++  CommitUpdate<false>(pi, pa, serial_pa, value, len);
+   return 0;
+ }
+ 
+ int SystemProperties::Add(const char* name, unsigned int namelen, const char* value,
+                           unsigned int valuelen) {
++  if (strcmp(name, ecm_export::kAlias) == 0) return -1;
++  return AddInternal(name, namelen, value, valuelen);
++}
++
++int SystemProperties::AddInternal(const char* name, unsigned int namelen, const char* value,
++                                  unsigned int valuelen) {
+   if (valuelen >= PROP_VALUE_MAX && !is_read_only(name)) {
+     return -1;
+   }
+@@ -309,6 +326,144 @@ int SystemProperties::Add(const char* name, unsigned int namelen, const char* va
+   return 0;
+ }
+ 
++// Candidate fragment inserted into system_properties.cpp by make_proposal.py.
++// The containing SystemProperties object must be the initialized writable owner.
++// Lock ownership and context lifetime are caller obligations; never cache this adapter.
++class SystemProperties::EcmStorage {
++ public:
++  struct Plan {
++    prop_info* pi = nullptr;
++    prop_area* area = nullptr;
++    prop_area* serial_area = nullptr;
++    size_t length = 0;
++  };
++  explicit EcmStorage(SystemProperties& owner) : owner_(owner) {}
++
++  // Caller holds the global all-mutator lock, excluding context reset/remap.
++  // Success is storage preparation only; sticky startup failure/readiness is
++  // owned by init. No canonical Add, Update, notification or serial change.
++  bool InitializeSnapshot() noexcept {
++    ecm_export::Value old;
++    bool exists = false;
++    if (!Snapshot(old, exists)) return false;
++    prop_area* area = owner_.contexts_->GetPropAreaForName(ecm_export::kAlias);
++    if (!area || !owner_.contexts_->GetSerialPropArea()) return false;
++    if (!exists && !area->find(ecm_export::kAlias)) return true;
++    bool changed = false;
++    if (!ReserveAlias(old, changed)) return false;
++    Plan alias;
++    if (!PrepareUpdate(ecm_export::Target::Alias, old, alias)) return false;
++    // Add initializes its end byte to NUL. A canonical Update can retain a
++    // nonzero end byte, so finish the exact len+1 snapshot using the pinned plan.
++    if (memcmp(alias.pi->value, old.bytes, old.size + 1) != 0) Commit(alias, old);
++    return true;
++  }
++
++  bool Snapshot(ecm_export::Value& old, bool& exists) noexcept {
++    if (!owner_.initialized_) return false;
++    prop_area* area = owner_.contexts_->GetPropAreaForName(ecm_export::kCanonical);
++    if (!area || !owner_.contexts_->GetSerialPropArea()) return false;
++    const prop_info* pi = area->find(ecm_export::kCanonical);
++    exists = pi != nullptr;
++    if (!exists) return old.Assign(nullptr, 0);
++    Plan plan;
++    ecm_export::Value empty;
++    if (!PrepareUpdate(ecm_export::Target::Canonical, empty, plan)) return false;
++    const unsigned int length = SERIAL_VALUE_LEN(
++        atomic_load_explicit(&plan.pi->serial, memory_order_relaxed));
++    old.CopyStored(plan.pi->value, length);
++    return true;
++  }
++
++  bool ReserveAlias(const ecm_export::Value& old, bool& changed) noexcept {
++    if (!owner_.initialized_) return false;
++    prop_area* area = owner_.contexts_->GetPropAreaForName(ecm_export::kAlias);
++    if (!area || !owner_.contexts_->GetSerialPropArea()) return false;
++    const prop_info* before = area->find(ecm_export::kAlias);
++    if (!before) {
++      if (owner_.AddInternal(ecm_export::kAlias, sizeof(ecm_export::kAlias) - 1,
++                             old.bytes, old.size) != 0) return false;
++      changed = true;  // Newly visible property, even when empty.
++      return true;
++    }
++    Plan plan;
++    if (!PrepareUpdate(ecm_export::Target::Alias, old, plan)) return false;
++    const unsigned int length = SERIAL_VALUE_LEN(
++        atomic_load_explicit(&plan.pi->serial, memory_order_relaxed));
++    changed = length != old.size || memcmp(plan.pi->value, old.bytes, old.size) != 0;
++    if (changed) Commit(plan, old);  // Reconcile from canonical, never import alias state.
++    return true;
++  }
++
++  bool PrepareUpdate(ecm_export::Target target, const ecm_export::Value& next,
++                     Plan& plan) noexcept {
++    if (!owner_.initialized_ || next.size >= PROP_VALUE_MAX) return false;
++    const char* name = target == ecm_export::Target::Canonical
++                           ? ecm_export::kCanonical : ecm_export::kAlias;
++    prop_area* serial_area = owner_.contexts_->GetSerialPropArea();
++    prop_area* area = owner_.contexts_->GetPropAreaForName(name);
++    if (!serial_area || !area) return false;
++    prop_info* pi = const_cast<prop_info*>(area->find(name));
++    // Validate the ACTUAL object in its matching area, not a name-only cached guess.
++    if (!pi || strcmp(pi->name, name) != 0) return false;
++    const uint32_t serial = atomic_load_explicit(&pi->serial, memory_order_relaxed);
++    if (!ecm_export::ValidMutableSerial(serial))
++      return false;
++    plan = {pi, area, serial_area, next.size};
++    return true;
++  }
++
++  bool PrepareAdd(const ecm_export::Value& next, Plan& plan) noexcept {
++    if (!owner_.initialized_ || next.size >= PROP_VALUE_MAX) return false;
++    prop_area* serial_area = owner_.contexts_->GetSerialPropArea();
++    prop_area* area = owner_.contexts_->GetPropAreaForName(ecm_export::kCanonical);
++    if (!serial_area || !area || area->find(ecm_export::kCanonical)) return false;
++    plan = {nullptr, area, serial_area, next.size};
++    return true;
++  }
++
++  bool AddCanonical(const Plan& plan, const ecm_export::Value& next) noexcept {
++    // Fixed non-ro key + short value: prop_area::add publishes the prop_info only
++    // after its final allocation succeeds. Failed trie allocation may consume space.
++    if (!plan.area->add(ecm_export::kCanonical, sizeof(ecm_export::kCanonical) - 1,
++                         next.bytes, next.size)) return false;
++    // No lookup/validation after publication; same serial tail as existing Add.
++    atomic_store_explicit(plan.serial_area->serial(),
++                          atomic_load_explicit(plan.serial_area->serial(), memory_order_relaxed) + 1,
++                          memory_order_release);
++    __futex_wake(plan.serial_area->serial(), INT32_MAX);
++    return true;
++  }
++
++  void CommitCanonical(const Plan& plan, ecm_export::Value& next) noexcept {
++    // Preserve canonical Update byte-for-byte, including its retained tail after NUL.
++    owner_.CommitUpdate<false>(plan.pi, plan.area, plan.serial_area, next.bytes, plan.length);
++    next.CopyStored(plan.pi->value, plan.length);  // Pinned pointer, no fallible lookup.
++  }
++
++  void Commit(const Plan& plan, const ecm_export::Value& next) noexcept {
++    // Only prevalidated transaction-local plans reach here. This instantiation
++    // copies actual canonical length+1 bytes, including any nonzero advertised end.
++    // No strlcpy, allocation, coercion, or fallible Update call.
++    owner_.CommitUpdate<true>(plan.pi, plan.area, plan.serial_area, next.bytes, plan.length);
++  }
++
++ private:
++  SystemProperties& owner_;
++};
++
++ecm_export::Result SystemProperties::SetEcmSnapshot(const char* value, size_t length) noexcept {
++  static_assert(ecm_export::kCapacity == PROP_VALUE_MAX);
++  EcmStorage storage(*this);
++  return ecm_export::Store(storage, ecm_export::kCanonical, value, length);
++}
++
++bool SystemProperties::InitializeEcmSnapshot() noexcept {
++  static_assert(ecm_export::kCapacity == PROP_VALUE_MAX);
++  EcmStorage storage(*this);
++  return storage.InitializeSnapshot();
++}
++
+ uint32_t SystemProperties::WaitAny(uint32_t old_serial) {
+   uint32_t new_serial;
+   Wait(nullptr, old_serial, &new_serial, nullptr);
+diff --git a/libc/system_properties/vt_property_audit.cpp b/libc/system_properties/vt_property_audit.cpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..cfdf9e2aa022898838366085733baef09b152239
+--- /dev/null
++++ b/libc/system_properties/vt_property_audit.cpp
+@@ -0,0 +1,44 @@
++#include "system_properties/vt_property_audit.h"
++
++#if defined(LINEAGE_PROPERTY_AUDIT)
++#include <stdatomic.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/prctl.h>
++
++#include <async_safe/log.h>
++
++#include "private/ErrnoRestorer.h"
++
++bool IsVtPropertyAuditTarget() {
++  ErrnoRestorer errno_restorer;
++  const char* program = getprogname();
++  if (program != nullptr && strcmp(program, "vtservice") == 0) return true;
++  if (program != nullptr && strcmp(program, "<unknown>") != 0) return false;
++  char thread_name[16] = {};
++  return prctl(PR_GET_NAME, thread_name) == 0 && strcmp(thread_name, "vtservice") == 0;
++}
++
++void TraceVtPropertyRoute(VtPropertyAuditOperation operation) {
++  ErrnoRestorer errno_restorer;
++  if (!IsVtPropertyAuditTarget()) return;
++  static const char* const operations[] = {
++      "serialized_init", "named_lookup", "foreach", "reset_access", "named_vendor_open",
++      "foreach_vendor", "reset_vendor", "vendor_check", "vendor_open",
++  };
++  const auto index = static_cast<unsigned int>(operation);
++  if (index >= sizeof(operations) / sizeof(operations[0])) return;
++  static atomic_uint reported = 0;
++  const unsigned int mask = 1u << index;
++  if ((atomic_fetch_or_explicit(&reported, mask, memory_order_relaxed) & mask) != 0) return;
++  const char* enabled = getenv("LINEAGE_PROPERTY_AUDIT");
++  const bool environment_enabled = enabled != nullptr && strcmp(enabled, "1") == 0;
++  const char* environment = enabled == nullptr ? "absent" : environment_enabled ? "enabled" : "disabled";
++  const char* context = index >= static_cast<unsigned int>(VtPropertyAuditOperation::NamedVendorOpen)
++                            ? "u:object_r:vendor_default_prop:s0"
++                            : "none";
++  async_safe_format_log(ANDROID_LOG_INFO, "property_route",
++                        "route operation=%s context=%s env=%s scope=process_selector limit=9",
++                        operations[index], context, environment);
++}
++#endif

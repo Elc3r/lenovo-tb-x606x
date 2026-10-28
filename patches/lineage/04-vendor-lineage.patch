@@ -1,0 +1,14 @@
+diff --git a/build/soong/Android.bp b/build/soong/Android.bp
+index c549c340cabbdf52cf929789e1be540c55f537bf..de50414be02aac3e5eda1c5d5fb07f4c945b2990 100644
+--- a/build/soong/Android.bp
++++ b/build/soong/Android.bp
+@@ -21,7 +21,8 @@ lineage_generator {
+     name: "generated_kernel_includes",
+ 
+     // The headers make command
+-    cmd: "$(PATH_OVERRIDE_SOONG) $(KERNEL_MAKE_CMD) $(KERNEL_MAKE_FLAGS) -C $(TARGET_KERNEL_SOURCE) O=$(KERNEL_BUILD_OUT_PREFIX)$(genDir) ARCH=$(KERNEL_ARCH) $(KERNEL_CROSS_COMPILE) headers_install",
++    // cmd: "$(PATH_OVERRIDE_SOONG) $(KERNEL_MAKE_CMD) $(KERNEL_MAKE_FLAGS) -C $(TARGET_KERNEL_SOURCE) O=$(KERNEL_BUILD_OUT_PREFIX)$(genDir) ARCH=$(KERNEL_ARCH) $(KERNEL_CROSS_COMPILE) headers_install",
++    cmd: "echo 'd'",
+ 
+     // Directories that can be imported by a cc_* module generated_headers property
+     export_include_dirs: [

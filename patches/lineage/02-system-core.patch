@@ -1,0 +1,533 @@
+diff --git a/init/Android.bp b/init/Android.bp
+index 00ac6a75203c9395c7a062c0f11cc3f4fe4cc4f6..587c8a6cc5f499cb6b8e58c2ebf64b7e2f7bdabc 100644
+--- a/init/Android.bp
++++ b/init/Android.bp
+@@ -70,6 +70,7 @@ init_device_sources = [
+     "persistent_properties.cpp",
+     "persistent_properties.proto",
+     "property_service.cpp",
++    "ril_property_audit.cpp",
+     "property_service.proto",
+     "reboot.cpp",
+     "reboot_utils.cpp",
+@@ -109,8 +110,49 @@ soong_config_module_type {
+     ],
+ }
+ 
++soong_config_module_type {
++    name: "lineage_ril_audit_cc_defaults",
++    module_type: "cc_defaults",
++    config_namespace: "lineageRilAudit",
++    bool_variables: ["enabled"],
++    properties: ["cflags"],
++}
++
++lineage_ril_audit_cc_defaults {
++    name: "lineage_ril_audit_defaults",
++    soong_config_variables: {
++        enabled: {
++            cflags: ["-DLINEAGE_RIL_PROPERTY_AUDIT=1"],
++            conditions_default: {
++                cflags: ["-DLINEAGE_RIL_PROPERTY_AUDIT=0"],
++            },
++        },
++    },
++}
++
++soong_config_module_type {
++    name: "lineage_ecm_export_cc_defaults",
++    module_type: "cc_defaults",
++    config_namespace: "lineageEcmExport",
++    bool_variables: ["enabled"],
++    properties: ["cflags"],
++}
++
++lineage_ecm_export_cc_defaults {
++    name: "lineage_ecm_export_defaults",
++    soong_config_variables: {
++        enabled: {
++            cflags: ["-DLINEAGE_ECM_EXPORT=1"],
++            conditions_default: {
++                cflags: ["-DLINEAGE_ECM_EXPORT=0"],
++            },
++        },
++    },
++}
++
+ libinit_cc_defaults {
+     name: "init_defaults",
++    defaults: ["lineage_ril_audit_defaults", "lineage_ecm_export_defaults"],
+     sanitize: {
+         misc_undefined: ["signed-integer-overflow"],
+     },
+diff --git a/init/property_service.cpp b/init/property_service.cpp
+index d429fc76200bafcc83186593ec3d0d117515a407..ab401aa3e45be48b954fadb2fcd835743afd35d2 100644
+--- a/init/property_service.cpp
++++ b/init/property_service.cpp
+@@ -39,6 +39,7 @@
+ #define _REALLY_INCLUDE_SYS__SYSTEM_PROPERTIES_H_
+ #include <sys/_system_properties.h>
+ 
++#include <atomic>
+ #include <map>
+ #include <memory>
+ #include <mutex>
+@@ -50,6 +51,7 @@
+ 
+ #include <InitProperties.sysprop.h>
+ #include <android-base/chrono_utils.h>
++#include <android-base/errno_restorer.h>
+ #include <android-base/file.h>
+ #include <android-base/logging.h>
+ #include <android-base/parseint.h>
+@@ -75,6 +77,10 @@
+ #include "util.h"
+ #include "vendor_init.h"
+ 
++#if LINEAGE_RIL_PROPERTY_AUDIT && ALLOW_PERMISSIVE_SELINUX && !defined(RECOVERY)
++#include "ril_property_audit.h"
++#endif
++
+ using namespace std::literals;
+ 
+ using android::base::GetProperty;
+@@ -109,10 +115,64 @@ static int from_init_socket = -1;
+ static int init_socket = -1;
+ static bool accept_messages = false;
+ static std::mutex accept_messages_lock;
++
++// Candidate only. Enabled exclusively by the intended product after validation.
++#if LINEAGE_ECM_EXPORT && !defined(RECOVERY)
++// Lock order: property_store_lock, then accept_messages_lock. Serializes ALL
++// Add/Update operations, including non-ECM allocations sharing an area's backup.
++static std::mutex property_store_lock;
++static std::atomic<bool> ecm_snapshot_ready{false};
++static bool ecm_startup_checked = false;  // Protected by property_store_lock.
++static bool ecm_boot_write_failed = false;  // Protected by property_store_lock.
++#endif
++
++bool IsEcmSnapshotReady() {
++#if LINEAGE_ECM_EXPORT && !defined(RECOVERY)
++    return ecm_snapshot_ready.load(std::memory_order_acquire);
++#else
++    return true;
++#endif
++}
++
++#if LINEAGE_ECM_EXPORT && !defined(RECOVERY)
++static void InitializeEcmPublisher() {
++    const auto lock = std::lock_guard{property_store_lock};
++    ecm_startup_checked = true;
++    const bool prepared = __system_property_initialize_ecm_snapshot() == 0;
++    const bool ready = prepared && !ecm_boot_write_failed;
++    ecm_snapshot_ready.store(ready, std::memory_order_release);
++    if (!ready) {
++        LOG(ERROR) << "ECM publisher initialization failed; RIL startup remains blocked";
++    }
++}
++#endif
++
+ static std::thread property_service_thread;
+ 
+ static PropertyInfoAreaFile property_info_area;
+ 
++#if LINEAGE_RIL_PROPERTY_AUDIT && ALLOW_PERMISSIVE_SELINUX && !defined(RECOVERY)
++static ril_audit::Writer ril_property_audit_writer;
++
++static void InitializeRilPropertyAudit() {
++    android::base::ErrnoRestorer errno_restorer;
++    unique_fd audit_fd(open("/dev/lineage_ril_property_audit",
++                           O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600));
++    if (audit_fd < 0) {
++        PLOG(WARNING) << "RIL property audit disabled: cannot create sink";
++        return;
++    }
++    char* context = nullptr;
++    const int context_length = fgetfilecon(audit_fd.get(), &context);
++    const bool expected_context = context_length >= 0 && context != nullptr &&
++                                  strcmp(context, "u:object_r:ril_property_audit_file:s0") == 0;
++    freecon(context);
++    if (!expected_context || !ril_property_audit_writer.Initialize(audit_fd.get())) {
++        LOG(WARNING) << "RIL property audit disabled: invalid sink context or initialization failure";
++    }
++}
++#endif
++
+ struct PropertyAuditData {
+     const ucred* cr;
+     const char* name;
+@@ -174,6 +234,10 @@ static bool CheckMacPerms(const std::string& name, const char* target_context,
+ }
+ 
+ static uint32_t PropertySet(const std::string& name, const std::string& value, std::string* error) {
++#if LINEAGE_ECM_EXPORT && !defined(RECOVERY)
++    const auto store_lock = std::lock_guard{property_store_lock};
++#endif
++
+     size_t valuelen = value.size();
+ 
+     if (!IsLegalPropertyName(name)) {
+@@ -183,9 +247,45 @@ static uint32_t PropertySet(const std::string& name, const std::string& value, s
+ 
+     if (auto result = IsLegalPropertyValue(name, value); !result.ok()) {
+         *error = result.error().message();
++#if LINEAGE_ECM_EXPORT && !defined(RECOVERY)
++        if (name == "ril.cdma.inecmmode" && !ecm_startup_checked) {
++            ecm_boot_write_failed = true;
++        }
++#endif
++
+         return PROP_ERROR_INVALID_VALUE;
+     }
+ 
++
++#if LINEAGE_ECM_EXPORT && !defined(RECOVERY)
++    // Applies to internal boot/default calls as well as socket requests.
++    if (name == "sys.radio.ecm_v1") {
++        *error = "ECM snapshot is published only by its canonical transaction";
++        return PROP_ERROR_PERMISSION_DENIED;
++    }
++    if (name == "ril.cdma.inecmmode") {
++        int alias_changed = 0;
++        if (__system_property_set_ecm_snapshot(value.c_str(), valuelen, &alias_changed) != 0) {
++            if (!ecm_startup_checked) ecm_boot_write_failed = true;
++            *error = "ECM snapshot storage preparation failed";
++            return PROP_ERROR_SET_FAILED;
++        }
++        ecm_boot_write_failed = false;
++        if (ecm_startup_checked) ecm_snapshot_ready.store(true, std::memory_order_release);
++        // Source then alias notifications, while keeping writer exclusion.
++        // Storage success is not undone by caller death or event delivery failure.
++        const auto message_lock = std::lock_guard{accept_messages_lock};
++        if (accept_messages) {
++            PropertyChanged(name, value);
++            if (alias_changed) {
++                char stored[PROP_VALUE_MAX] = {};
++                const int length = __system_property_get("sys.radio.ecm_v1", stored);
++                PropertyChanged("sys.radio.ecm_v1", std::string(stored, length));
++            }
++        }
++        return PROP_SUCCESS;
++    }
++#endif
+     prop_info* pi = (prop_info*) __system_property_find(name.c_str());
+     if (pi != nullptr) {
+         // ro.* properties are actually "write-once".
+@@ -463,6 +563,10 @@ uint32_t CheckPermissions(const std::string& name, const std::string& value,
+     const char* type = nullptr;
+     property_info_area->GetPropertyInfo(name.c_str(), &target_context, &type);
+ 
++#if LINEAGE_RIL_PROPERTY_AUDIT && ALLOW_PERMISSIVE_SELINUX && !defined(RECOVERY)
++    ril_property_audit_writer.Record(source_context.c_str(), name.c_str(), target_context,
++                                    cr.pid, cr.uid);
++#endif
+     if (!CheckMacPerms(name, target_context, source_context.c_str(), cr)) {
+         *error = "SELinux permission check failed";
+         return PROP_ERROR_PERMISSION_DENIED;
+@@ -1276,6 +1380,10 @@ void PropertyInit() {
+     ExportKernelBootProps();
+ 
+     PropertyLoadBootDefaults();
++#if LINEAGE_ECM_EXPORT && !defined(RECOVERY)
++    InitializeEcmPublisher();
++#endif
++
+ }
+ 
+ static void HandleInitSocket() {
+@@ -1337,6 +1445,9 @@ static void PropertyServiceThread() {
+ }
+ 
+ void StartPropertyService(int* epoll_socket) {
++#if LINEAGE_RIL_PROPERTY_AUDIT && ALLOW_PERMISSIVE_SELINUX && !defined(RECOVERY)
++    InitializeRilPropertyAudit();
++#endif
+     InitPropertySet("ro.property_service.version", "2");
+ 
+     int sockets[2];
+diff --git a/init/property_service.h b/init/property_service.h
+index 2d49a36fa5140de04972ecc11e40d8d9a159629f..f6e42247e65dcf20eba67a5ec58941cc892fc205 100644
+--- a/init/property_service.h
++++ b/init/property_service.h
+@@ -29,6 +29,7 @@ static constexpr const char kRestoreconProperty[] = "selinux.restorecon_recursiv
+ 
+ bool CanReadProperty(const std::string& source_context, const std::string& name);
+ 
++bool IsEcmSnapshotReady();
+ void PropertyInit();
+ void StartPropertyService(int* epoll_socket);
+ 
+diff --git a/init/ril_property_audit.cpp b/init/ril_property_audit.cpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..0be2d788d433f23392c7398e464717d7e81c1398
+--- /dev/null
++++ b/init/ril_property_audit.cpp
+@@ -0,0 +1,189 @@
++#include "ril_property_audit.h"
++
++#include <sys/mman.h>
++#include <sys/stat.h>
++#include <time.h>
++#include <unistd.h>
++
++#include <cerrno>
++#include <cstdint>
++#include <cstring>
++#include <limits>
++#include <new>
++
++namespace android::init::ril_audit {
++namespace {
++
++static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
++static_assert(sizeof(pid_t) == 4 && sizeof(uid_t) == 4);
++static_assert(__atomic_always_lock_free(sizeof(uint32_t), nullptr));
++
++constexpr uint32_t kCapacityFlag = 1;
++constexpr uint32_t kFieldFlag = 2;
++constexpr uint32_t kClockFlag = 4;
++constexpr uint32_t kExhaustedFlag = 8;
++constexpr uint32_t kMax = std::numeric_limits<uint32_t>::max();
++
++struct Header {
++    char magic[8];
++    uint32_t version;
++    uint32_t header_bytes;
++    uint32_t record_bytes;
++    uint32_t capacity;
++    uint32_t sequence;
++    uint32_t records;
++    uint32_t attempts;
++    uint32_t duplicates;
++    uint32_t dropped;
++    uint32_t flags;
++    uint8_t reserved[16];
++};
++
++struct Row {
++    int32_t pid;
++    uint32_t uid;
++    uint64_t boottime_ns;
++    char name[256];
++    char target[256];
++    uint8_t reserved[112];
++};
++
++static_assert(sizeof(Header) == Writer::kHeaderBytes && alignof(Header) == 4);
++static_assert(offsetof(Header, magic) == 0 && offsetof(Header, version) == 8);
++static_assert(offsetof(Header, header_bytes) == 12 && offsetof(Header, record_bytes) == 16);
++static_assert(offsetof(Header, capacity) == 20 && offsetof(Header, sequence) == 24);
++static_assert(offsetof(Header, records) == 28 && offsetof(Header, attempts) == 32);
++static_assert(offsetof(Header, duplicates) == 36 && offsetof(Header, dropped) == 40);
++static_assert(offsetof(Header, flags) == 44 && offsetof(Header, reserved) == 48);
++static_assert(sizeof(Row) == Writer::kRecordBytes && alignof(Row) == 8);
++static_assert(offsetof(Row, pid) == 0 && offsetof(Row, uid) == 4);
++static_assert(offsetof(Row, boottime_ns) == 8 && offsetof(Row, name) == 16);
++static_assert(offsetof(Row, target) == 272 && offsetof(Row, reserved) == 528);
++
++class ErrnoGuard {
++  public:
++    ErrnoGuard() : saved_(errno) {}
++    ~ErrnoGuard() { errno = saved_; }
++
++  private:
++    int saved_;
++};
++
++bool ValidField(const char* value, bool target) {
++    if (value == nullptr || value[0] == '\0') return false;
++    for (size_t index = 0; index < 256; ++index) {
++        unsigned char character = value[index];
++        if (character == 0) return true;
++        if (!((character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
++              (character >= '0' && character <= '9') || character == '_' || character == '.' ||
++              character == '-' || character == ':' || (!target && character == '@') ||
++              (target && character == ','))) {
++            return false;
++        }
++    }
++    return false;
++}
++
++void Increment(uint32_t& counter, Header& header) {
++    if (counter != kMax) ++counter;
++    if (counter == kMax) header.flags |= kExhaustedFlag;
++}
++
++}
++
++Writer::~Writer() {
++    ErrnoGuard guard;
++    if (mapping_ != nullptr) munmap(mapping_, kFileBytes);
++}
++
++bool Writer::Initialize(int fd) {
++    ErrnoGuard guard;
++    std::lock_guard<std::mutex> lock(mutex_);
++    if (attempted_) return false;
++    attempted_ = true;
++    struct stat st {};
++    if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_nlink != 1 ||
++        (st.st_mode & 07777) != 0600 || st.st_uid != geteuid() || st.st_size != 0) {
++        return false;
++    }
++    if (ftruncate(fd, kFileBytes) != 0) return false;
++    void* mapping = mmap(nullptr, kFileBytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
++    if (mapping == MAP_FAILED) return false;
++    auto* header = new (mapping) Header{};
++    __atomic_store_n(&header->sequence, 1, __ATOMIC_SEQ_CST);
++    __atomic_thread_fence(__ATOMIC_SEQ_CST);
++    memcpy(header->magic, "RILSET1", sizeof(header->magic));
++    header->version = 1;
++    header->header_bytes = kHeaderBytes;
++    header->record_bytes = kRecordBytes;
++    header->capacity = kCapacity;
++    __atomic_store_n(&header->sequence, 2, __ATOMIC_RELEASE);
++    mapping_ = mapping;
++    return true;
++}
++
++void Writer::Record(const char* source, const char* name, const char* target, pid_t pid,
++                    uid_t uid) noexcept {
++    ErrnoGuard guard;
++    if (source == nullptr || strncmp(source, "u:r:rild:s0", sizeof("u:r:rild:s0")) != 0) {
++        return;
++    }
++    bool scoped = name != nullptr &&
++                  (strncmp(name, "vendor.", 7) == 0 ||
++                   strncmp(name, "persist.vendor.", 15) == 0 ||
++                   strncmp(name, "ro.vendor.", 10) == 0);
++    if (name != nullptr && !scoped) return;
++    std::lock_guard<std::mutex> lock(mutex_);
++    if (mapping_ == nullptr || exhausted_) return;
++    auto& header = *static_cast<Header*>(mapping_);
++    uint32_t sequence = __atomic_load_n(&header.sequence, __ATOMIC_ACQUIRE);
++    __atomic_store_n(&header.sequence, sequence + 1, __ATOMIC_SEQ_CST);
++    __atomic_thread_fence(__ATOMIC_SEQ_CST);
++    if (scoped) Increment(header.attempts, header);
++    if (sequence >= kMax - 3) {
++        header.flags |= kExhaustedFlag;
++        Increment(header.dropped, header);
++        exhausted_ = true;
++    } else {
++        if (!ValidField(name, false) || !ValidField(target, true)) {
++            Increment(header.dropped, header);
++            header.flags |= kFieldFlag;
++        } else {
++            auto* rows = reinterpret_cast<Row*>(static_cast<char*>(mapping_) + kHeaderBytes);
++            bool duplicate = false;
++            for (uint32_t index = 0; index < header.records; ++index) {
++                if (rows[index].pid == pid && rows[index].uid == uid &&
++                    strcmp(rows[index].name, name) == 0 && strcmp(rows[index].target, target) == 0) {
++                    duplicate = true;
++                    break;
++                }
++            }
++            if (duplicate) {
++                Increment(header.duplicates, header);
++            } else if (header.records == kCapacity) {
++                Increment(header.dropped, header);
++                header.flags |= kCapacityFlag;
++            } else {
++                struct timespec now {};
++                if (clock_gettime(CLOCK_BOOTTIME, &now) != 0 || now.tv_sec < 0 ||
++                    now.tv_nsec < 0 || now.tv_nsec >= 1000000000 ||
++                    static_cast<uint64_t>(now.tv_sec) >
++                            (UINT64_MAX - static_cast<uint64_t>(now.tv_nsec)) / 1000000000) {
++                    Increment(header.dropped, header);
++                    header.flags |= kClockFlag;
++                } else {
++                    auto& row = *new (&rows[header.records]) Row{};
++                    row.pid = pid;
++                    row.uid = uid;
++                    row.boottime_ns = static_cast<uint64_t>(now.tv_sec) * 1000000000 + now.tv_nsec;
++                    memcpy(row.name, name, strlen(name) + 1);
++                    memcpy(row.target, target, strlen(target) + 1);
++                    ++header.records;
++                }
++            }
++        }
++    }
++    __atomic_store_n(&header.sequence, sequence + 2, __ATOMIC_RELEASE);
++}
++
++}
+diff --git a/init/ril_property_audit.h b/init/ril_property_audit.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..651f17f1e22c2d2a4845e1d7d30643b6bbf0f989
+--- /dev/null
++++ b/init/ril_property_audit.h
+@@ -0,0 +1,33 @@
++#pragma once
++
++#include <sys/types.h>
++
++#include <cstddef>
++#include <mutex>
++
++namespace android::init::ril_audit {
++
++class Writer {
++  public:
++    static constexpr size_t kCapacity = 512;
++    static constexpr size_t kHeaderBytes = 64;
++    static constexpr size_t kRecordBytes = 640;
++    static constexpr size_t kFileBytes = kHeaderBytes + kCapacity * kRecordBytes;
++
++    Writer() = default;
++    ~Writer();
++    Writer(const Writer&) = delete;
++    Writer& operator=(const Writer&) = delete;
++
++    bool Initialize(int fd);
++    void Record(const char* source, const char* name, const char* target, pid_t pid,
++                uid_t uid) noexcept;
++
++  private:
++    std::mutex mutex_;
++    void* mapping_ = nullptr;
++    bool attempted_ = false;
++    bool exhausted_ = false;
++};
++
++}
+diff --git a/init/service.cpp b/init/service.cpp
+index dcb3d0c3c6fa925051ad49593d24ae0f15450ccd..106a20cd45e44b27e9c610236a155a39b0eb0b1f 100644
+--- a/init/service.cpp
++++ b/init/service.cpp
+@@ -15,6 +15,7 @@
+  */
+ 
+ #include "service.h"
++#include "property_service.h"
+ 
+ #include <fcntl.h>
+ #include <inttypes.h>
+@@ -367,6 +368,12 @@ void Service::DumpState() const {
+ 
+ 
+ Result<void> Service::ExecStart() {
++#if LINEAGE_ECM_EXPORT && !defined(RECOVERY)
++    // Also precede ExecStart's own reboot_on_failure scope guard.
++    if (name_ == "vendor.ril-daemon-mtk" && !IsEcmSnapshotReady()) {
++        return Error() << "ECM publisher is not ready; RIL startup remains blocked";
++    }
++#endif
+     auto reboot_on_failure = make_scope_guard([this] {
+         if (on_failure_reboot_target_) {
+             trigger_shutdown(*on_failure_reboot_target_);
+@@ -398,6 +405,14 @@ Result<void> Service::ExecStart() {
+ }
+ 
+ Result<void> Service::Start() {
++#if LINEAGE_ECM_EXPORT && !defined(RECOVERY)
++    // Enforce readiness on EVERY start route, including ctl.start/restarts.
++    // Before reboot_on_failure: publisher failure never triggers a new reboot.
++    if (name_ == "vendor.ril-daemon-mtk" && !IsEcmSnapshotReady()) {
++        return Error() << "ECM publisher is not ready; RIL startup remains blocked";
++    }
++#endif
++
+     auto reboot_on_failure = make_scope_guard([this] {
+         if (on_failure_reboot_target_) {
+             trigger_shutdown(*on_failure_reboot_target_);

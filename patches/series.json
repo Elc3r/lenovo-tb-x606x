@@ -1,0 +1,60 @@
+[
+  {
+    "project": "bionic",
+    "base": "a89c3af2a973f626d6f978dc429120d57010c244",
+    "patch": "patches/lineage/01-bionic.patch",
+    "sha256": "6d4ae7f697d7fb14471ac5bb5e507080ca4f186cc0f599c6b1cb7b1fe522f0cd",
+    "tree": "lineage"
+  },
+  {
+    "project": "system/core",
+    "base": "1dd6bab94356caa929a505fe5059954536b21a0a",
+    "patch": "patches/lineage/02-system-core.patch",
+    "sha256": "87cd9bcdafbf2a20718febab111e82759526afecebd49a2f77c9d4b45865010d",
+    "tree": "lineage"
+  },
+  {
+    "project": "system/logging",
+    "base": "dc2db268eaa2012461ce7e01aab4e8e47eb1d6d2",
+    "patch": "patches/lineage/03-system-logging.patch",
+    "sha256": "c18856131b8d6da318b4d8f047a49122c7f008cf25600bc81c1f2cd25186800b",
+    "tree": "lineage"
+  },
+  {
+    "project": "vendor/lineage",
+    "base": "48deacfcdcdd6338c5b1cf88e53364db92adf854",
+    "patch": "patches/lineage/04-vendor-lineage.patch",
+    "sha256": "315e9d966be8f2e61db908ed82b37aad479e1b031da435f6c110a423ec58a1d3",
+    "tree": "lineage"
+  },
+  {
+    "project": "packages/apps/FMRadio",
+    "base": "f4065dbc19fd58a5498fe711a0b1a0a7c9311ed8",
+    "patch": "patches/lineage/05-packages-apps-FMRadio.patch",
+    "sha256": "d57288046a5e2559a18f2777f3e16f50618359d899afa0ff67a074d3d44e94d2",
+    "tree": "lineage"
+  },
+  {
+    "project": "system/vold",
+    "base": "a164ba05c5fef288059774a776b2e6e1119957cf",
+    "patch": "patches/twrp/01-system-vold.patch",
+    "sha256": "e13dfa897e6f0bce079f21619b1c31c7ebd84c0d8f5f6d7b70e059aa8fc49938",
+    "tree": "twrp"
+  },
+  {
+    "project": "device/lenovo/mt6765-common",
+    "base": "1f36ce47ffbfb55838b282f46ce0c46e6f1b0a28",
+    "patch": "patches/lineage/06-android_device_lenovo_mt6765-common.patch",
+    "sha256": "4ab0fdf0883ede1d2fd8250ff98b1b7e9ea17b76aa513e3e08a25fa6448017b9",
+    "tree": "lineage",
+    "integrated_revision": "f459c4e57cec8ccd7d7e73ff8c2eb51c80842c81"
+  },
+  {
+    "project": "device/lenovo/achilles6_row_data",
+    "base": "162ed79f078d29880d84491bc7f82f4e765f0f23",
+    "patch": "patches/lineage/07-android_device_lenovo_achilles6_row_data.patch",
+    "sha256": "2ed5a7d2d878648722cd7dc29c0520b0544752f645edee04db35bcb1da68f348",
+    "tree": "lineage",
+    "integrated_revision": "f9b8c304be89d952679454c038edd6c6bec338af"
+  }
+]
