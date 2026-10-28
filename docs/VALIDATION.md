@@ -23,7 +23,8 @@ account change or device access was performed during this preparation.
   Targeted scans found no known private device identifiers, home paths or
   private-key material in the prepared text files.
 - Original workspace source-plan validation still passes. Prepared clones have
-  independent Git stores, preserved upstream history and no configured remotes.
+  independent Git stores and preserved upstream history. They initially had no
+  remotes; approved publication adds only the corresponding Elc3r remotes.
 
 Re-run portable tests:
 
@@ -52,3 +53,19 @@ in the prepared common tree and its integration patch.
 The portable verifier additionally checks their compiled permissions and exact
 regular-file labels and passed against that new OTA. It does not claim calls,
 SMS, emergency/ECM, roaming or BIP validation.
+
+## Publication manifests and bootstrap
+
+The primary manifests pin the committed Elc3r device trees. The Lineage manifest
+copies the inherited matching Beanpod input from an auxiliary recovery project;
+the TWRP manifest copies the LTE kernel from an auxiliary LTE device project.
+Both copyfile payload identities were checked against their committed objects.
+The upstream-only manifests and full patch series remain available separately.
+
+Both primary manifests passed real `repo init`/manifest loading in isolated local
+checkouts. The preparation tool recognizes exact integrated device commits;
+it still checks platform patch bases. Four isolated kernel-helper tests pass,
+covering a ready kernel without a Lineage checkout, explicit kernel import and
+early rejection of wrong local/source bytes. Git patch operations in those four
+tests are mocked. These bootstrap tests do not constitute a full platform sync,
+Android build or new hardware test.
