@@ -34,6 +34,26 @@ Future work: test real cellular lifecycle, a second device, long-running use,
 and reproducible builds from clean clones. A newer Android branch requires
 policy/API/build review; do not simply copy the current generated policy.
 
+## DiPlay CarPlay and HEVC
+
+The user tested working CarPlay and forced HEVC playback with SELinux Enforcing
+after the October 28, 2026 media-policy fixes. The changes cover the exact Vcodec
+character node, codec/GED ioctl sets, the app-visible MediaTek MMS graphics
+conversion HAL, buffer metadata operations and the HEVC CPU-count query.
+
+The captured HEVC path runs through MediaTek's software library behind its OMX
+component. These results do not establish hardware HEVC acceleration, every
+profile/bit depth/resolution, other CarPlay apps or long-term stability. Ordinary
+app network-statistics restrictions and legacy HEVC default-property denials are
+retained. No generic app access to vendor services or codec device nodes is added.
+MMS is the vendor graphics-conversion API here, not the telephony messaging API.
+
+Host checks covered full/split/recovery policy compilation with neverallows,
+Treble checks, selected prior subsystem boundaries and targeted negative tests.
+The public OTA verifier checks the packaged media policy and contexts. Private
+device captures, connection/authentication data and installation journals are
+not included. A clean full remote build remains unverified.
+
 The first inserted-SIM test exposed write-open denials on NA77_005, followed by
 a modem exception and failed GSM symlink cleanup during recovery. The narrow
 repair gives those two existing regular records a separate type and permits

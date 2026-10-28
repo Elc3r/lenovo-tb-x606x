@@ -272,7 +272,7 @@
   <project name="tools/platform-compat" revision="f2b050c5a844c9621113d573f06b85c692349a87" upstream="refs/tags/android-12.1.0_r4" dest-branch="refs/tags/android-12.1.0_r4" groups="pdk,pdk-cw-fs,pdk-fs" />
   <superproject name="platform/superproject" revision="android-12.1.0_r4" />
   <contactinfo bugurl="go/repo-bug" />
-  <project name="android_device_lenovo_X606X_twrp" path="device/lenovo/X606X" remote="tb-x606x" revision="2a9e3fa6b66caae2f3ef8be6fc3873cdba816b77" upstream="android-12.1-fbe" dest-branch="android-12.1-fbe" />
+  <project name="android_device_lenovo_X606X_twrp" path="device/lenovo/X606X" remote="tb-x606x" revision="f3cc266c85bae77fc8c415a39953a55d729e8019" upstream="android-12.1-fbe" dest-branch="android-12.1-fbe" />
   <project name="android_device_lenovo_achilles6_row_data" path="port-inputs/lineage-device" remote="tb-x606x" revision="4abb03ccbfbae0383d8251bc797aa2564726b193" upstream="lineage-19.1" dest-branch="lineage-19.1">
     <copyfile src="prebuilt/Image.gz" dest="device/lenovo/X606X/prebuilt/x606x_Image.gz" />
   </project>

@@ -53,6 +53,7 @@ explicit patches; their limitations are documented in ARCHITECTURE.md.
 ## Build and verify
 
 ```bash
+unset TOP ANDROID_BUILD_TOP TARGET_PRODUCT TARGET_BUILD_VARIANT TARGET_BUILD_TYPE TARGET_BUILD_APPS
 source build/envsetup.sh
 lunch lineage_achilles6_row_data-userdebug
 m -j4 selinux_policy

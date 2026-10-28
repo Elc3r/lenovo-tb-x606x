@@ -1,6 +1,6 @@
 diff --git a/.gitignore b/.gitignore
 new file mode 100644
-index 0000000000000000000000000000000000000000..e77b374a4aa5633ba68fe7d2998821f4315b90f2
+index 0000000..e77b374
 --- /dev/null
 +++ b/.gitignore
 @@ -0,0 +1,6 @@
@@ -11,7 +11,7 @@ index 0000000000000000000000000000000000000000..e77b374a4aa5633ba68fe7d2998821f4
 +/keymaster/android.hardware.keymaster@4.0-service.beanpod
 +*.log
 diff --git a/Android.bp b/Android.bp
-index 9515b25732000716036b754fa6b2a23444c3d9a3..9026a53df3e41ff213d84dc894f53b94d83d5042 100644
+index 9515b25..9026a53 100644
 --- a/Android.bp
 +++ b/Android.bp
 @@ -1,2 +1,52 @@
@@ -68,7 +68,7 @@ index 9515b25732000716036b754fa6b2a23444c3d9a3..9026a53df3e41ff213d84dc894f53b94
 +    },
 +}
 diff --git a/BoardConfigCommon.mk b/BoardConfigCommon.mk
-index ad448365da3b27a47c8c5b95e9d123d28e45b862..3059f04931eea76d2f41efe8413be0caad488579 100644
+index ad44836..3059f04 100644
 --- a/BoardConfigCommon.mk
 +++ b/BoardConfigCommon.mk
 @@ -6,6 +6,25 @@
@@ -108,7 +108,7 @@ index ad448365da3b27a47c8c5b95e9d123d28e45b862..3059f04931eea76d2f41efe8413be0ca
  BOARD_KERNEL_TAGS_OFFSET := 0x07808000
 diff --git a/LICENSE b/LICENSE
 new file mode 100644
-index 0000000000000000000000000000000000000000..62589edd12a37dd28b6b6fed1e2d728ac9f05c8d
+index 0000000..62589ed
 --- /dev/null
 +++ b/LICENSE
 @@ -0,0 +1,202 @@
@@ -316,7 +316,7 @@ index 0000000000000000000000000000000000000000..62589edd12a37dd28b6b6fed1e2d728a
 +   limitations under the License.
 diff --git a/LICENSING.md b/LICENSING.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..c0015e547ad196504f7567283caaa9cb39ec6966
+index 0000000..c0015e5
 --- /dev/null
 +++ b/LICENSING.md
 @@ -0,0 +1,10 @@
@@ -332,10 +332,10 @@ index 0000000000000000000000000000000000000000..c0015e547ad196504f7567283caaa9cb
 +See the integration repository's docs/PROVENANCE.md for dependencies and hashes.
 diff --git a/README.md b/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..7172e15bf0880cc32d4e506fe5c0c766f5ad9847
+index 0000000..c39bf5a
 --- /dev/null
 +++ b/README.md
-@@ -0,0 +1,62 @@
+@@ -0,0 +1,68 @@
 +# Lenovo MT6765 common tree — LineageOS 19.1
 +
 +Unofficial Android 12L / API 32 port, tested on the **Lenovo TB-X606X LTE**,
@@ -355,6 +355,12 @@ index 0000000000000000000000000000000000000000..7172e15bf0880cc32d4e506fe5c0c766
 +interface, logging and build compatibility patches from the integration repo.
 +
 +## Tested behavior
++
++DiPlay CarPlay and forced HEVC playback were tested with SELinux Enforcing on
++the same tablet. The policy includes a dedicated Vcodec node, exact codec/GED
++commands, an app-visible MMS graphics-conversion service and the CPU-count query
++used by the observed vendor software HEVC backend. This is not a claim of
++hardware-accelerated HEVC or complete codec/profile coverage.
 +
 +Android cold-boots with SELinux **Enforcing**. The tested userdebug build
 +retains standard `su` and `backuptool` permissive domains. Hardware Beanpod
@@ -400,7 +406,7 @@ index 0000000000000000000000000000000000000000..7172e15bf0880cc32d4e506fe5c0c766
 +Private logs, identifiers, update journals and abandoned experiments are excluded.
 diff --git a/camera-config/Android.bp b/camera-config/Android.bp
 new file mode 100644
-index 0000000000000000000000000000000000000000..708429c1838ccb14765666ce64bc8e05c86e749e
+index 0000000..708429c
 --- /dev/null
 +++ b/camera-config/Android.bp
 @@ -0,0 +1,9 @@
@@ -415,7 +421,7 @@ index 0000000000000000000000000000000000000000..708429c1838ccb14765666ce64bc8e05
 +}
 diff --git a/camera-config/Android.mk b/camera-config/Android.mk
 new file mode 100644
-index 0000000000000000000000000000000000000000..8b8b8fa04fb5884f92f047a8d9d7f737d21a21d6
+index 0000000..8b8b8fa
 --- /dev/null
 +++ b/camera-config/Android.mk
 @@ -0,0 +1,15 @@
@@ -436,7 +442,7 @@ index 0000000000000000000000000000000000000000..8b8b8fa04fb5884f92f047a8d9d7f737
 +lenovo_camera_config_outputs :=
 diff --git a/camera-config/README.md b/camera-config/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..08b3d46e63181243b9cf7da9f726dea7b2cb34fe
+index 0000000..08b3d46
 --- /dev/null
 +++ b/camera-config/README.md
 @@ -0,0 +1,9 @@
@@ -451,7 +457,7 @@ index 0000000000000000000000000000000000000000..08b3d46e63181243b9cf7da9f726dea7
 +EEPROM/calibration overrides are unchanged. See migrate.py for pinned identities.
 diff --git a/camera-config/check_transitions.py b/camera-config/check_transitions.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..bd9c9336c4569f1a15bdba49a7b932dacea583af
+index 0000000..bd9c933
 --- /dev/null
 +++ b/camera-config/check_transitions.py
 @@ -0,0 +1,23 @@
@@ -480,7 +486,7 @@ index 0000000000000000000000000000000000000000..bd9c9336c4569f1a15bdba49a7b932da
 +    return {'exact_camera_config_filename_transitions': sorted(transitions)}
 diff --git a/camera-config/migrate.py b/camera-config/migrate.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..6dcda6aa15891855a9dce85ca89b8c513f2b6691
+index 0000000..6dcda6a
 --- /dev/null
 +++ b/camera-config/migrate.py
 @@ -0,0 +1,96 @@
@@ -582,7 +588,7 @@ index 0000000000000000000000000000000000000000..6dcda6aa15891855a9dce85ca89b8c51
 +    main()
 diff --git a/camera-config/test_migrate.py b/camera-config/test_migrate.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..9c2e38d2cb4606bfdb240977f5073eb30b6fffc0
+index 0000000..9c2e38d
 --- /dev/null
 +++ b/camera-config/test_migrate.py
 @@ -0,0 +1,113 @@
@@ -701,7 +707,7 @@ index 0000000000000000000000000000000000000000..9c2e38d2cb4606bfdb240977f5073eb3
 +    main()
 diff --git a/camera-storage/Android.bp b/camera-storage/Android.bp
 new file mode 100644
-index 0000000000000000000000000000000000000000..e248eee33266c13af611e6daef91d6cc67886724
+index 0000000..e248eee
 --- /dev/null
 +++ b/camera-storage/Android.bp
 @@ -0,0 +1,9 @@
@@ -716,7 +722,7 @@ index 0000000000000000000000000000000000000000..e248eee33266c13af611e6daef91d6cc
 +}
 diff --git a/camera-storage/Android.mk b/camera-storage/Android.mk
 new file mode 100644
-index 0000000000000000000000000000000000000000..3cf8657477d832b0b8f92039f4057ab19727a3a0
+index 0000000..3cf8657
 --- /dev/null
 +++ b/camera-storage/Android.mk
 @@ -0,0 +1,13 @@
@@ -735,7 +741,7 @@ index 0000000000000000000000000000000000000000..3cf8657477d832b0b8f92039f4057ab1
 +lenovo_camera_storage_tool :=
 diff --git a/camera-storage/README.md b/camera-storage/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..9bcae0bd1b923227e28b53587612306b07b1d3a4
+index 0000000..9bcae0b
 --- /dev/null
 +++ b/camera-storage/README.md
 @@ -0,0 +1,8 @@
@@ -749,7 +755,7 @@ index 0000000000000000000000000000000000000000..9bcae0bd1b923227e28b53587612306b
 +Exact input/output identities and output guards are in migrate.py.
 diff --git a/camera-storage/migrate.py b/camera-storage/migrate.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..c2a5915959cb0682eca00ff2b15d6e815b740238
+index 0000000..c2a5915
 --- /dev/null
 +++ b/camera-storage/migrate.py
 @@ -0,0 +1,88 @@
@@ -843,7 +849,7 @@ index 0000000000000000000000000000000000000000..c2a5915959cb0682eca00ff2b15d6e81
 +    main()
 diff --git a/camera-storage/test_migrate.py b/camera-storage/test_migrate.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..4ca25930f5b54577efdc41fa76aae413f4c0e5dd
+index 0000000..4ca2593
 --- /dev/null
 +++ b/camera-storage/test_migrate.py
 @@ -0,0 +1,137 @@
@@ -986,7 +992,7 @@ index 0000000000000000000000000000000000000000..4ca25930f5b54577efdc41fa76aae413
 +    main()
 diff --git a/codec/Android.mk b/codec/Android.mk
 new file mode 100644
-index 0000000000000000000000000000000000000000..b45cd9106a349c973537dbcb5df390a2e9a706d4
+index 0000000..b45cd91
 --- /dev/null
 +++ b/codec/Android.mk
 @@ -0,0 +1,21 @@
@@ -1013,7 +1019,7 @@ index 0000000000000000000000000000000000000000..b45cd9106a349c973537dbcb5df390a2
 +lenovo_codec_inputs :=
 diff --git a/codec/README.md b/codec/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..c37c700292352b065258f36c1f70e106e83943c5
+index 0000000..c37c700
 --- /dev/null
 +++ b/codec/README.md
 @@ -0,0 +1,7 @@
@@ -1025,7 +1031,7 @@ index 0000000000000000000000000000000000000000..c37c700292352b065258f36c1f70e106
 +input revisions, ELF architecture and literal offset/uniqueness are checked.
 +See the generator for exact hashes. The permission contract is in vendor policy.
 diff --git a/configs/cgroups.json b/configs/cgroups.json
-index 5871a63fa23feebcf2776dd0fedad7d70b79279c..3113fc916caf86125ffd520389fbc2b0463d1ca7 100644
+index 5871a63..3113fc9 100644
 --- a/configs/cgroups.json
 +++ b/configs/cgroups.json
 @@ -31,7 +31,8 @@
@@ -1040,7 +1046,7 @@ index 5871a63fa23feebcf2776dd0fedad7d70b79279c..3113fc916caf86125ffd520389fbc2b0
        "Controller": "schedtune",
 diff --git a/configs/keybox-status/README.md b/configs/keybox-status/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..b2b231d9ac2c23a2402eed59c933ca413c6db613
+index 0000000..b2b231d
 --- /dev/null
 +++ b/configs/keybox-status/README.md
 @@ -0,0 +1,6 @@
@@ -1052,7 +1058,7 @@ index 0000000000000000000000000000000000000000..b2b231d9ac2c23a2402eed59c933ca41
 +Manual secure-world commands are not part of the build or update workflow.
 diff --git a/configs/keybox-status/microtrust.bp_kmsetkey_ca.rc b/configs/keybox-status/microtrust.bp_kmsetkey_ca.rc
 new file mode 100644
-index 0000000000000000000000000000000000000000..b8849d04affafe3b8d2c7b6b8adb80ba39583458
+index 0000000..b8849d0
 --- /dev/null
 +++ b/configs/keybox-status/microtrust.bp_kmsetkey_ca.rc
 @@ -0,0 +1,6 @@
@@ -1064,7 +1070,7 @@ index 0000000000000000000000000000000000000000..b8849d04affafe3b8d2c7b6b8adb80ba
 +    disabled
 diff --git a/ecm-consumer/Android.bp b/ecm-consumer/Android.bp
 new file mode 100644
-index 0000000000000000000000000000000000000000..b39f806249909add787157f297efe8ba5ac97066
+index 0000000..b39f806
 --- /dev/null
 +++ b/ecm-consumer/Android.bp
 @@ -0,0 +1,9 @@
@@ -1079,7 +1085,7 @@ index 0000000000000000000000000000000000000000..b39f806249909add787157f297efe8ba
 +}
 diff --git a/ecm-consumer/Android.mk b/ecm-consumer/Android.mk
 new file mode 100644
-index 0000000000000000000000000000000000000000..13d005cb14ee69f195e2e3f1b3334fc00290651b
+index 0000000..13d005c
 --- /dev/null
 +++ b/ecm-consumer/Android.mk
 @@ -0,0 +1,12 @@
@@ -1097,7 +1103,7 @@ index 0000000000000000000000000000000000000000..13d005cb14ee69f195e2e3f1b3334fc0
 +lenovo_ecm_consumer_tool :=
 diff --git a/ecm-consumer/README.md b/ecm-consumer/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..7367989484a75102bae711cd9aeefec5129f82ce
+index 0000000..7367989
 --- /dev/null
 +++ b/ecm-consumer/README.md
 @@ -0,0 +1,8 @@
@@ -1111,7 +1117,7 @@ index 0000000000000000000000000000000000000000..7367989484a75102bae711cd9aeefec5
 +emergency/ECM transition and restart semantics remain untested on hardware.
 diff --git a/ecm-consumer/migrate.py b/ecm-consumer/migrate.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..31f2ef7e18a10b0bb4802a09387796c538781c72
+index 0000000..31f2ef7
 --- /dev/null
 +++ b/ecm-consumer/migrate.py
 @@ -0,0 +1,85 @@
@@ -1202,7 +1208,7 @@ index 0000000000000000000000000000000000000000..31f2ef7e18a10b0bb4802a09387796c5
 +    main()
 diff --git a/graphics-storage/Android.bp b/graphics-storage/Android.bp
 new file mode 100644
-index 0000000000000000000000000000000000000000..33f7390bdc7a31e06278e137d5a5cca204892eda
+index 0000000..33f7390
 --- /dev/null
 +++ b/graphics-storage/Android.bp
 @@ -0,0 +1,9 @@
@@ -1217,7 +1223,7 @@ index 0000000000000000000000000000000000000000..33f7390bdc7a31e06278e137d5a5cca2
 +}
 diff --git a/graphics-storage/Android.mk b/graphics-storage/Android.mk
 new file mode 100644
-index 0000000000000000000000000000000000000000..f818c8301f433e5f6ed39bc1328dc4c59c2a763b
+index 0000000..f818c83
 --- /dev/null
 +++ b/graphics-storage/Android.mk
 @@ -0,0 +1,13 @@
@@ -1236,7 +1242,7 @@ index 0000000000000000000000000000000000000000..f818c8301f433e5f6ed39bc1328dc4c5
 +lenovo_graphics_tool :=
 diff --git a/graphics-storage/README.md b/graphics-storage/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..cec3bb221602fb36ef1e90792ef290aa32d59d40
+index 0000000..cec3bb2
 --- /dev/null
 +++ b/graphics-storage/README.md
 @@ -0,0 +1,7 @@
@@ -1249,7 +1255,7 @@ index 0000000000000000000000000000000000000000..cec3bb221602fb36ef1e90792ef290aa
 +one demonstrated user-storage probe, not every possible graphics storage path.
 diff --git a/graphics-storage/migrate.py b/graphics-storage/migrate.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..29e7c03878b679a9fe2f185346eb93f407b827d9
+index 0000000..29e7c03
 --- /dev/null
 +++ b/graphics-storage/migrate.py
 @@ -0,0 +1,91 @@
@@ -1346,7 +1352,7 @@ index 0000000000000000000000000000000000000000..29e7c03878b679a9fe2f185346eb93f4
 +    main()
 diff --git a/graphics-storage/test_migrate.py b/graphics-storage/test_migrate.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..04ce071791179990b5d58183fda58f71ea56fc12
+index 0000000..04ce071
 --- /dev/null
 +++ b/graphics-storage/test_migrate.py
 @@ -0,0 +1,153 @@
@@ -1505,7 +1511,7 @@ index 0000000000000000000000000000000000000000..04ce071791179990b5d58183fda58f71
 +    main()
 diff --git a/keymaster/README.md b/keymaster/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..cd6ac42b038e551f175569e8d48749bf0f756268
+index 0000000..cd6ac42
 --- /dev/null
 +++ b/keymaster/README.md
 @@ -0,0 +1,16 @@
@@ -1527,7 +1533,7 @@ index 0000000000000000000000000000000000000000..cd6ac42b038e551f175569e8d48749bf
 +environment log is not remote-attestation or overall security certification.
 diff --git a/keymaster/android.hardware.keymaster@4.0-service.rc b/keymaster/android.hardware.keymaster@4.0-service.rc
 new file mode 100644
-index 0000000000000000000000000000000000000000..2adfd88ce9967c01a2744374bf29b0a3d82e68a5
+index 0000000..2adfd88
 --- /dev/null
 +++ b/keymaster/android.hardware.keymaster@4.0-service.rc
 @@ -0,0 +1,5 @@
@@ -1538,7 +1544,7 @@ index 0000000000000000000000000000000000000000..2adfd88ce9967c01a2744374bf29b0a3
 +    group system drmrpc
 diff --git a/media-properties/Android.mk b/media-properties/Android.mk
 new file mode 100644
-index 0000000000000000000000000000000000000000..8b355ed587fda18fb27028c6cf265b741c74d15c
+index 0000000..8b355ed
 --- /dev/null
 +++ b/media-properties/Android.mk
 @@ -0,0 +1,26 @@
@@ -1570,7 +1576,7 @@ index 0000000000000000000000000000000000000000..8b355ed587fda18fb27028c6cf265b74
 +lenovo_media_targets :=
 diff --git a/media-properties/README.md b/media-properties/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..fcb2dd1a31cf9fe69e34ea9824ed7aa28d34fd3d
+index 0000000..fcb2dd1
 --- /dev/null
 +++ b/media-properties/README.md
 @@ -0,0 +1,8 @@
@@ -1584,7 +1590,7 @@ index 0000000000000000000000000000000000000000..fcb2dd1a31cf9fe69e34ea9824ed7aa2
 +copied from a device. This does not enable dump/debug options by default.
 diff --git a/modem-logger-build/Android.mk b/modem-logger-build/Android.mk
 new file mode 100644
-index 0000000000000000000000000000000000000000..8528c17b70920fa046fd7b0aaacb6a88854bc5b1
+index 0000000..8528c17
 --- /dev/null
 +++ b/modem-logger-build/Android.mk
 @@ -0,0 +1,13 @@
@@ -1603,7 +1609,7 @@ index 0000000000000000000000000000000000000000..8528c17b70920fa046fd7b0aaacb6a88
 +lenovo_logger_tool :=
 diff --git a/modem-logger/README.md b/modem-logger/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..922e776a609bfc19c94fd1e6fd4be79bc92eb2ee
+index 0000000..922e776
 --- /dev/null
 +++ b/modem-logger/README.md
 @@ -0,0 +1,8 @@
@@ -1616,7 +1622,7 @@ index 0000000000000000000000000000000000000000..922e776a609bfc19c94fd1e6fd4be79b
 +output bytes are pinned; generated files remain under OUT_DIR. This is not a
 +telephony correctness claim or a broad service-control policy workaround.
 diff --git a/mt6765.mk b/mt6765.mk
-index 9ed599c9e50d7de8826e7bcdd106066968cea8b3..e1ef5469c4d84f01c9f12349c3dfba4ab11dc930 100644
+index 9ed599c..e1ef546 100644
 --- a/mt6765.mk
 +++ b/mt6765.mk
 @@ -7,6 +7,10 @@
@@ -1687,7 +1693,7 @@ index 9ed599c9e50d7de8826e7bcdd106066968cea8b3..e1ef5469c4d84f01c9f12349c3dfba4a
  $(call inherit-product, vendor/lenovo/mt6765-common/mt6765-common-vendor.mk)
 diff --git a/proinfo-probe-build/Android.mk b/proinfo-probe-build/Android.mk
 new file mode 100644
-index 0000000000000000000000000000000000000000..61589b4997c6d59e3f12c0ccb5893d26942763b7
+index 0000000..61589b4
 --- /dev/null
 +++ b/proinfo-probe-build/Android.mk
 @@ -0,0 +1,13 @@
@@ -1706,7 +1712,7 @@ index 0000000000000000000000000000000000000000..61589b4997c6d59e3f12c0ccb5893d26
 +lenovo_proinfo_tool :=
 diff --git a/proinfo-probe/README.md b/proinfo-probe/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..1032b3597db96800ac36c1ab8d25003422581bbc
+index 0000000..1032b35
 --- /dev/null
 +++ b/proinfo-probe/README.md
 @@ -0,0 +1,7 @@
@@ -1719,7 +1725,7 @@ index 0000000000000000000000000000000000000000..1032b3597db96800ac36c1ab8d250034
 +is added. Input/output identities and generated-output guards are in the tool.
 diff --git a/proinfo-probe/binary-provenance.json b/proinfo-probe/binary-provenance.json
 new file mode 100644
-index 0000000000000000000000000000000000000000..ceb8d6a142d37f66abf0a8b4f3dda0e9d997e6a8
+index 0000000..ceb8d6a
 --- /dev/null
 +++ b/proinfo-probe/binary-provenance.json
 @@ -0,0 +1,50 @@
@@ -1775,7 +1781,7 @@ index 0000000000000000000000000000000000000000..ceb8d6a142d37f66abf0a8b4f3dda0e9
 +]
 diff --git a/proinfo-probe/reviewed-recipe.json b/proinfo-probe/reviewed-recipe.json
 new file mode 100644
-index 0000000000000000000000000000000000000000..ac7b2fe2bdabb38b7a92e03adaabdd8172d205eb
+index 0000000..ac7b2fe
 --- /dev/null
 +++ b/proinfo-probe/reviewed-recipe.json
 @@ -0,0 +1,35 @@
@@ -1816,7 +1822,7 @@ index 0000000000000000000000000000000000000000..ac7b2fe2bdabb38b7a92e03adaabdd81
 +}
 diff --git a/proinfo-probe/test_proof.py b/proinfo-probe/test_proof.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..ffc3145bff99f2ca3c1174cc851a688df5dc83cb
+index 0000000..ffc3145
 --- /dev/null
 +++ b/proinfo-probe/test_proof.py
 @@ -0,0 +1,188 @@
@@ -2009,7 +2015,7 @@ index 0000000000000000000000000000000000000000..ffc3145bff99f2ca3c1174cc851a688d
 +if __name__ == "__main__":
 +    unittest.main(verbosity=2)
 diff --git a/rootdir/etc/init.mt6765.rc b/rootdir/etc/init.mt6765.rc
-index 246ea4677f49b2705af0728ab6d6b31e4dc35b5d..1ad775aa397c48e4d384b5aa679c6f5496acb5dc 100644
+index 246ea46..1ad775a 100644
 --- a/rootdir/etc/init.mt6765.rc
 +++ b/rootdir/etc/init.mt6765.rc
 @@ -9,6 +9,7 @@ import /vendor/etc/init/hw/init.sensor_1_0.rc
@@ -2103,7 +2109,7 @@ index 246ea4677f49b2705af0728ab6d6b31e4dc35b5d..1ad775aa397c48e4d384b5aa679c6f54
      write /proc/sys/vm/dirty_writeback_centisecs 300
      chmod 0660 /sys/power/autosleep
 diff --git a/rootdir/etc/init.mt8768.rc b/rootdir/etc/init.mt8768.rc
-index 246ea4677f49b2705af0728ab6d6b31e4dc35b5d..1ad775aa397c48e4d384b5aa679c6f5496acb5dc 100644
+index 246ea46..1ad775a 100644
 --- a/rootdir/etc/init.mt8768.rc
 +++ b/rootdir/etc/init.mt8768.rc
 @@ -9,6 +9,7 @@ import /vendor/etc/init/hw/init.sensor_1_0.rc
@@ -2198,7 +2204,7 @@ index 246ea4677f49b2705af0728ab6d6b31e4dc35b5d..1ad775aa397c48e4d384b5aa679c6f54
      chmod 0660 /sys/power/autosleep
 diff --git a/sepolicy/README.md b/sepolicy/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..385fc1866fc8727322943f9f8282200fea9f8d7a
+index 0000000..385fc18
 --- /dev/null
 +++ b/sepolicy/README.md
 @@ -0,0 +1,45 @@
@@ -2249,14 +2255,14 @@ index 0000000000000000000000000000000000000000..385fc1866fc8727322943f9f8282200f
 +an empty AVC log is not a release criterion. New Android versions need review.
 diff --git a/sepolicy/system_ext/private/auditctl_status.te b/sepolicy/system_ext/private/auditctl_status.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..cf7fe0358f9bf04994210234f9da25a52ea687f2
+index 0000000..cf7fe03
 --- /dev/null
 +++ b/sepolicy/system_ext/private/auditctl_status.te
 @@ -0,0 +1 @@
 +allow auditctl self:netlink_audit_socket nlmsg_read;
 diff --git a/sepolicy/system_ext/private/ecm_snapshot.te b/sepolicy/system_ext/private/ecm_snapshot.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..ddc32f82f191a4009c108afc68dc9cde312bf502
+index 0000000..ddc32f8
 --- /dev/null
 +++ b/sepolicy/system_ext/private/ecm_snapshot.te
 @@ -0,0 +1,5 @@
@@ -2267,7 +2273,7 @@ index 0000000000000000000000000000000000000000..ddc32f82f191a4009c108afc68dc9cde
 +neverallow appdomain mt6765_ecm_snapshot_prop:file no_rw_file_perms;
 diff --git a/sepolicy/system_ext/private/file_contexts b/sepolicy/system_ext/private/file_contexts
 new file mode 100644
-index 0000000000000000000000000000000000000000..6e0c45c8989dbc33c98eccd44cbf6162eecc5dc6
+index 0000000..6e0c45c
 --- /dev/null
 +++ b/sepolicy/system_ext/private/file_contexts
 @@ -0,0 +1,3 @@
@@ -2276,7 +2282,7 @@ index 0000000000000000000000000000000000000000..6e0c45c8989dbc33c98eccd44cbf6162
 +/dev/lineage_ril_property_audit u:object_r:ril_property_audit_file:s0
 diff --git a/sepolicy/system_ext/private/mtk_modemdbfilter.te b/sepolicy/system_ext/private/mtk_modemdbfilter.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..4d97a8f3437beb77d093d4c004d1f3c81cf827cc
+index 0000000..4d97a8f
 --- /dev/null
 +++ b/sepolicy/system_ext/private/mtk_modemdbfilter.te
 @@ -0,0 +1,5 @@
@@ -2287,7 +2293,7 @@ index 0000000000000000000000000000000000000000..4d97a8f3437beb77d093d4c004d1f3c8
 +hwbinder_use(mtk_modemdbfilter)
 diff --git a/sepolicy/system_ext/private/mtk_vtservice.te b/sepolicy/system_ext/private/mtk_vtservice.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..0f6e6c1442588bc12c4ac0ea339362ee1f24ce33
+index 0000000..0f6e6c1
 --- /dev/null
 +++ b/sepolicy/system_ext/private/mtk_vtservice.te
 @@ -0,0 +1,8 @@
@@ -2301,14 +2307,14 @@ index 0000000000000000000000000000000000000000..0f6e6c1442588bc12c4ac0ea339362ee
 +add_service(mtk_vtservice, mtk_vt_service)
 diff --git a/sepolicy/system_ext/private/property_contexts b/sepolicy/system_ext/private/property_contexts
 new file mode 100644
-index 0000000000000000000000000000000000000000..e85dfe10568b6adfe823d816849bdc59e3a9867a
+index 0000000..e85dfe1
 --- /dev/null
 +++ b/sepolicy/system_ext/private/property_contexts
 @@ -0,0 +1 @@
 +sys.radio.ecm_v1 u:object_r:mt6765_ecm_snapshot_prop:s0 exact string
 diff --git a/sepolicy/system_ext/private/ril_property_audit.te b/sepolicy/system_ext/private/ril_property_audit.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..dcbb7ac9456aa65b262fbef7592bc84e343b17f7
+index 0000000..dcbb7ac
 --- /dev/null
 +++ b/sepolicy/system_ext/private/ril_property_audit.te
 @@ -0,0 +1,10 @@
@@ -2324,14 +2330,14 @@ index 0000000000000000000000000000000000000000..dcbb7ac9456aa65b262fbef7592bc84e
 +neverallow { domain -coredomain -vendor_init -su } ril_property_audit_file:file no_rw_file_perms;
 diff --git a/sepolicy/system_ext/private/service_contexts b/sepolicy/system_ext/private/service_contexts
 new file mode 100644
-index 0000000000000000000000000000000000000000..e4c23a2a7e54ce37893fca8e9debdf90ba13a5fa
+index 0000000..e4c23a2
 --- /dev/null
 +++ b/sepolicy/system_ext/private/service_contexts
 @@ -0,0 +1 @@
 +media.VTS u:object_r:mtk_vt_service:s0
 diff --git a/sepolicy/system_ext/public/attributes b/sepolicy/system_ext/public/attributes
 new file mode 100644
-index 0000000000000000000000000000000000000000..6c46745f3b8334bc3a88a72c60ccb8fc8e6af751
+index 0000000..6c46745
 --- /dev/null
 +++ b/sepolicy/system_ext/public/attributes
 @@ -0,0 +1,4 @@
@@ -2341,14 +2347,14 @@ index 0000000000000000000000000000000000000000..6c46745f3b8334bc3a88a72c60ccb8fc
 +expandattribute mt6765_ecm_snapshot_reader false;
 diff --git a/sepolicy/system_ext/public/ecm_snapshot.te b/sepolicy/system_ext/public/ecm_snapshot.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..a6be7ce4bd689694e4dd0067ea253b40b01da582
+index 0000000..a6be7ce
 --- /dev/null
 +++ b/sepolicy/system_ext/public/ecm_snapshot.te
 @@ -0,0 +1 @@
 +system_restricted_prop(mt6765_ecm_snapshot_prop)
 diff --git a/sepolicy/vendor/boot_access.te b/sepolicy/vendor/boot_access.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..963fe54a864482255e11a23d512254c715674540
+index 0000000..963fe54
 --- /dev/null
 +++ b/sepolicy/vendor/boot_access.te
 @@ -0,0 +1,23 @@
@@ -2377,7 +2383,7 @@ index 0000000000000000000000000000000000000000..963fe54a864482255e11a23d512254c7
 +allow vendor_init vendor_proc_init_sched_tuning:file { open write };
 diff --git a/sepolicy/vendor/boot_diagnostics.te b/sepolicy/vendor/boot_diagnostics.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..d044ab2bc56baed23d19869d7ed6ea8408326695
+index 0000000..d044ab2
 --- /dev/null
 +++ b/sepolicy/vendor/boot_diagnostics.te
 @@ -0,0 +1,9 @@
@@ -2392,7 +2398,7 @@ index 0000000000000000000000000000000000000000..d044ab2bc56baed23d19869d7ed6ea84
 +neverallow vendor_init vendor_expdb_block_device:blk_file { append map ioctl };
 diff --git a/sepolicy/vendor/boot_property_defaults.te b/sepolicy/vendor/boot_property_defaults.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..0c3ba20639ac754078cff198018633836dbdc4fe
+index 0000000..0c3ba20
 --- /dev/null
 +++ b/sepolicy/vendor/boot_property_defaults.te
 @@ -0,0 +1,9 @@
@@ -2407,7 +2413,7 @@ index 0000000000000000000000000000000000000000..0c3ba20639ac754078cff19801863383
 +set_prop(vendor_init, vendor_connsys_driver_status_prop)
 diff --git a/sepolicy/vendor/camera_config_storage.te b/sepolicy/vendor/camera_config_storage.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..2ba7e8f2b0b11b889ed847909f19523dc3521c62
+index 0000000..2ba7e8f
 --- /dev/null
 +++ b/sepolicy/vendor/camera_config_storage.te
 @@ -0,0 +1,21 @@
@@ -2434,7 +2440,7 @@ index 0000000000000000000000000000000000000000..2ba7e8f2b0b11b889ed847909f19523d
 +neverallow appdomain { vendor_camera_setting_config vendor_camera_tuning_config vendor_camera_config_export }:file no_rw_file_perms;
 diff --git a/sepolicy/vendor/camera_debug_storage.te b/sepolicy/vendor/camera_debug_storage.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..9315f4d257a6bc28c2ee490e8aa1c051b5703d22
+index 0000000..9315f4d
 --- /dev/null
 +++ b/sepolicy/vendor/camera_debug_storage.te
 @@ -0,0 +1,24 @@
@@ -2464,7 +2470,7 @@ index 0000000000000000000000000000000000000000..9315f4d257a6bc28c2ee490e8aa1c051
 +neverallow appdomain { vendor_camera_jps_root vendor_camera_jps_data vendor_camera_depth_marker }:file no_rw_file_perms;
 diff --git a/sepolicy/vendor/camera_memory.te b/sepolicy/vendor/camera_memory.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..33c1f0dfb93f58239b583c487506ed93fa64774f
+index 0000000..33c1f0d
 --- /dev/null
 +++ b/sepolicy/vendor/camera_memory.te
 @@ -0,0 +1,4 @@
@@ -2474,7 +2480,7 @@ index 0000000000000000000000000000000000000000..33c1f0dfb93f58239b583c487506ed93
 +allow hal_camera_default proc_meminfo:file { read getattr open };
 diff --git a/sepolicy/vendor/connectivity_access.te b/sepolicy/vendor/connectivity_access.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..7a18c68feaadc8cd9cd048e9fa2be16d266f8bd2
+index 0000000..7a18c68
 --- /dev/null
 +++ b/sepolicy/vendor/connectivity_access.te
 @@ -0,0 +1,36 @@
@@ -2516,7 +2522,7 @@ index 0000000000000000000000000000000000000000..7a18c68feaadc8cd9cd048e9fa2be16d
 +allow netutils_wrapper vendor_netdagent_devpts:chr_file { read write };
 diff --git a/sepolicy/vendor/ecm_snapshot.te b/sepolicy/vendor/ecm_snapshot.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..8bdcb7623220b68dc05d58bb88620cc4780d5f21
+index 0000000..8bdcb76
 --- /dev/null
 +++ b/sepolicy/vendor/ecm_snapshot.te
 @@ -0,0 +1,2 @@
@@ -2524,10 +2530,10 @@ index 0000000000000000000000000000000000000000..8bdcb7623220b68dc05d58bb88620cc4
 +get_prop(rild, mt6765_ecm_snapshot_prop)
 diff --git a/sepolicy/vendor/file.te b/sepolicy/vendor/file.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..9851373e75d29bc5115baec7e77dcc911655b707
+index 0000000..1aa14f4
 --- /dev/null
 +++ b/sepolicy/vendor/file.te
-@@ -0,0 +1,117 @@
+@@ -0,0 +1,119 @@
 +type vendor_proc_ged, fs_type, proc_type;
 +type vendor_sysfs_boot_mode, fs_type, sysfs_type;
 +type vendor_sysfs_sensor_control, fs_type, sysfs_type;
@@ -2536,6 +2542,8 @@ index 0000000000000000000000000000000000000000..9851373e75d29bc5115baec7e77dcc91
 +type vendor_rpmb_device, dev_type;
 +type vendor_sensor_calibration_file, file_type;
 +type vendor_mtk_cmdq_device, dev_type;
++type vendor_vcodec_device, dev_type;
++type vendor_sw_sync_device, dev_type;
 +type vendor_sysfs_audio_codec, fs_type, sysfs_type;
 +type vendor_debugfs_pvr_stats, fs_type, debugfs_type;
 +type vendor_proc_power_dvfs, fs_type, proc_type;
@@ -2647,10 +2655,10 @@ index 0000000000000000000000000000000000000000..9851373e75d29bc5115baec7e77dcc91
 +type vendor_modem_parent_dir, file_type;
 diff --git a/sepolicy/vendor/file_contexts b/sepolicy/vendor/file_contexts
 new file mode 100644
-index 0000000000000000000000000000000000000000..923677fc7f404004566809d3113a51cba0ee7c8a
+index 0000000..c9dd0dc
 --- /dev/null
 +++ b/sepolicy/vendor/file_contexts
-@@ -0,0 +1,165 @@
+@@ -0,0 +1,168 @@
 +/dev/dri/renderD[0-9]+ u:object_r:gpu_device:s0
 +/dev/pvr_sync u:object_r:gpu_device:s0
 +/dev/mtk_disp_mgr u:object_r:graphics_device:s0
@@ -2660,6 +2668,9 @@ index 0000000000000000000000000000000000000000..923677fc7f404004566809d3113a51cb
 +/dev/m_ps_misc u:object_r:sensors_device:s0
 +/dev/m_als_misc u:object_r:sensors_device:s0
 +/dev/mtk_cmdq u:object_r:vendor_mtk_cmdq_device:s0
++/dev/Vcodec -c u:object_r:vendor_vcodec_device:s0
++/dev/sw_sync -c u:object_r:vendor_sw_sync_device:s0
++/(vendor|system/vendor)/bin/hw/vendor\.mediatek\.hardware\.mms@1\.5-service u:object_r:vendor_mms_exec:s0
 +/dev/ccci_fs u:object_r:vendor_ccci_fs_device:s0
 +/dev/ccci_md1_sta u:object_r:vendor_ccci_status_device:s0
 +/dev/ccci_rpc u:object_r:vendor_ccci_rpc_device:s0
@@ -2818,7 +2829,7 @@ index 0000000000000000000000000000000000000000..923677fc7f404004566809d3113a51cb
 +/mnt/vendor/nvdata/md -d u:object_r:vendor_modem_parent_dir:s0
 diff --git a/sepolicy/vendor/genfs_contexts b/sepolicy/vendor/genfs_contexts
 new file mode 100644
-index 0000000000000000000000000000000000000000..568b6d87a4c309cd70c6bb41d14d31435862e148
+index 0000000..568b6d8
 --- /dev/null
 +++ b/sepolicy/vendor/genfs_contexts
 @@ -0,0 +1,163 @@
@@ -2987,14 +2998,15 @@ index 0000000000000000000000000000000000000000..568b6d87a4c309cd70c6bb41d14d3143
 +genfscon proc /aed/generate-oops u:object_r:vendor_proc_aed_control:s0
 diff --git a/sepolicy/vendor/graphics.te b/sepolicy/vendor/graphics.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..57b11374537f07e2dd9e01b0414bfd23a6cb8fbb
+index 0000000..d49c091
 --- /dev/null
 +++ b/sepolicy/vendor/graphics.te
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,15 @@
 +allow { appdomain -isolated_app } vendor_proc_ged:file { getattr open read ioctl };
 +allow { bootanim hal_camera_default hal_graphics_allocator_default hal_graphics_composer_default mediacodec surfaceflinger system_server } vendor_proc_ged:file { getattr open read ioctl };
 +
-+allowxperm { appdomain -isolated_app } vendor_proc_ged:file ioctl { 0x6700 0x6703 0x6704 0x6705 0x6709 0x670d 0x6765 0x6766 };
++# libgralloc_extra uses the GE allocation/get/set/query contract (0x6764/65/66/69).
++allowxperm { appdomain -isolated_app } vendor_proc_ged:file ioctl { 0x6700 0x6703 0x6704 0x6705 0x6709 0x670d 0x6764 0x6765 0x6766 0x6769 };
 +allowxperm bootanim vendor_proc_ged:file ioctl { 0x6704 0x6765 0x6766 };
 +allowxperm hal_camera_default vendor_proc_ged:file ioctl { 0x6765 0x6766 };
 +allowxperm hal_graphics_allocator_default vendor_proc_ged:file ioctl { 0x6764 0x6765 0x6766 };
@@ -3007,7 +3019,7 @@ index 0000000000000000000000000000000000000000..57b11374537f07e2dd9e01b0414bfd23
 +allow hal_graphics_composer_default hidl_memory_hwservice:hwservice_manager find;
 diff --git a/sepolicy/vendor/hardware.te b/sepolicy/vendor/hardware.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..d92566e50f9e2e8f64960ffa9a504750fb849357
+index 0000000..d92566e
 --- /dev/null
 +++ b/sepolicy/vendor/hardware.te
 @@ -0,0 +1,5 @@
@@ -3018,7 +3030,7 @@ index 0000000000000000000000000000000000000000..d92566e50f9e2e8f64960ffa9a504750
 +allowxperm hal_keymaster_default tee_device:chr_file ioctl { 0xa400 0xa401 0xa402 0xa403 0xa408 };
 diff --git a/sepolicy/vendor/hwservice.te b/sepolicy/vendor/hwservice.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..80193977d4aa0838d7d96c399a220d6fe0c59c9b
+index 0000000..8019397
 --- /dev/null
 +++ b/sepolicy/vendor/hwservice.te
 @@ -0,0 +1,15 @@
@@ -3039,13 +3051,14 @@ index 0000000000000000000000000000000000000000..80193977d4aa0838d7d96c399a220d6f
 +type vendor_camera_atms_hwservice, hwservice_manager_type, protected_hwservice;
 diff --git a/sepolicy/vendor/hwservice_contexts b/sepolicy/vendor/hwservice_contexts
 new file mode 100644
-index 0000000000000000000000000000000000000000..5a56c09cf6ec4aa8fbc5eb71b45b6f4a037d8cd7
+index 0000000..3882ba3
 --- /dev/null
 +++ b/sepolicy/vendor/hwservice_contexts
-@@ -0,0 +1,16 @@
+@@ -0,0 +1,17 @@
 +vendor.mediatek.hardware.mtkpower::IMtkPower u:object_r:vendor_mtkpower_hwservice:s0
 +vendor.mediatek.hardware.mtkpower::IMtkPerf u:object_r:vendor_mtkpower_hwservice:s0
 +vendor.mediatek.hardware.pq::IPictureQuality u:object_r:vendor_pq_hwservice:s0
++vendor.mediatek.hardware.mms::IMms u:object_r:vendor_mms_hwservice:s0
 +vendor.mediatek.hardware.lbs::ILbs u:object_r:vendor_lbs_hwservice:s0
 +vendor.mediatek.hardware.gpu::IGraphicExt u:object_r:vendor_mtk_gpu_hwservice:s0
 +vendor.mediatek.hardware.keyinstall::IKeyinstall u:object_r:vendor_keyinstall_hwservice:s0
@@ -3061,10 +3074,10 @@ index 0000000000000000000000000000000000000000..5a56c09cf6ec4aa8fbc5eb71b45b6f4a
 +vendor.mediatek.hardware.camera.atms::IATMs u:object_r:vendor_camera_atms_hwservice:s0
 diff --git a/sepolicy/vendor/media_access.te b/sepolicy/vendor/media_access.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..d0aaf4d83c5a3ed1d6815d57955d9275bddf18d5
+index 0000000..63c03ae
 --- /dev/null
 +++ b/sepolicy/vendor/media_access.te
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,57 @@
 +hal_client_domain(hal_camera_default, hal_allocator)
 +vndbinder_use(hal_camera_default)
 +vndbinder_use(hal_gnss_default)
@@ -3086,8 +3099,14 @@ index 0000000000000000000000000000000000000000..d0aaf4d83c5a3ed1d6815d57955d9275
 +allow mediacodec graphics_device:chr_file { open read ioctl };
 +allowxperm mediacodec graphics_device:chr_file ioctl { 0x4600 0x4fc9 0x4fd0 };
 +
++# MediaTek decoder FD/mapping and initialization, lock/wait/unlock, power and
++# teardown operations. Keep these on the exact codec node, never generic device.
++allow mediacodec vendor_vcodec_device:chr_file { getattr open read write map ioctl };
++# 0x4d31 is the CPU-count query used by the vendor software HEVC backend.
++allowxperm mediacodec vendor_vcodec_device:chr_file ioctl { 0x4d0b 0x4d0d 0x4d15 0x4d16 0x4d17 0x4d18 0x4d27 0x4d28 0x4d31 0x4d33 0x4d37 };
++
 +allowxperm bootanim vendor_proc_ged:file ioctl { 0x6700 0x6709 };
-+allowxperm mediacodec vendor_proc_ged:file ioctl { 0x670e };
++allowxperm mediacodec vendor_proc_ged:file ioctl { 0x670e 0x6764 0x6766 0x6769 };
 +allowxperm surfaceflinger vendor_proc_ged:file ioctl { 0x6700 0x6709 };
 +allowxperm system_server vendor_proc_ged:file ioctl { 0x6700 0x6703 0x6704 0x6705 0x6709 0x670d 0x6766 };
 +
@@ -3100,6 +3119,8 @@ index 0000000000000000000000000000000000000000..d0aaf4d83c5a3ed1d6815d57955d9275
 +allowxperm hal_camera_default vendor_camera_focus_device:chr_file ioctl { 0x4101 0x4105 0x410a };
 +allow hal_camera_default vendor_camera_smi_device:chr_file { open read ioctl };
 +allowxperm hal_camera_default vendor_camera_smi_device:chr_file ioctl { 0x4f18 0x4f1c 0x4f1d 0x4f58 0x4f59 };
++allow mediacodec vendor_camera_smi_device:chr_file { getattr open read write ioctl };
++allowxperm mediacodec vendor_camera_smi_device:chr_file ioctl { 0x4f18 0x4f1c 0x4f1d };
 +allow hal_camera_default vendor_camera_ccu_device:chr_file { open read write ioctl };
 +allowxperm hal_camera_default vendor_camera_ccu_device:chr_file ioctl { 0x6300 0x6301 0x6302 0x6309 0x630b 0x6313 0x6314 0x6315 0x6316 0x6317 0x6318 0x6319 };
 +allow hal_camera_default vendor_proc_camera_thermal:file { open read write };
@@ -3116,7 +3137,7 @@ index 0000000000000000000000000000000000000000..d0aaf4d83c5a3ed1d6815d57955d9275
 +allowxperm hal_camera_default vendor_camera_fdvt_device:chr_file ioctl { 0x4e00 0x4e01 0x4e02 0x4e03 0x4e04 };
 diff --git a/sepolicy/vendor/media_owned_properties.te b/sepolicy/vendor/media_owned_properties.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..a89ed12694f5505115a88a6a7a707b957df23575
+index 0000000..a89ed12
 --- /dev/null
 +++ b/sepolicy/vendor/media_owned_properties.te
 @@ -0,0 +1,12 @@
@@ -3134,7 +3155,7 @@ index 0000000000000000000000000000000000000000..a89ed12694f5505115a88a6a7a707b95
 +neverallow hal_camera_default vendor_omx_core_log_prop:file no_rw_file_perms;
 diff --git a/sepolicy/vendor/media_pipeline_properties.te b/sepolicy/vendor/media_pipeline_properties.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..afc0d252e97f282100785b6d57036c3051212baa
+index 0000000..f76b222
 --- /dev/null
 +++ b/sepolicy/vendor/media_pipeline_properties.te
 @@ -0,0 +1,26 @@
@@ -3147,8 +3168,8 @@ index 0000000000000000000000000000000000000000..afc0d252e97f282100785b6d57036c30
 +get_prop(hal_camera_default, vendor_camera_pipeline_prop)
 +get_prop(mediacodec, vendor_codec_pipeline_prop)
 +get_prop({ mediacodec hal_camera_default }, vendor_codec_mem_log_prop)
-+get_prop({ mediacodec hal_graphics_composer_default hal_camera_default }, vendor_media_color_mode_prop)
-+get_prop({ mediacodec hal_graphics_composer_default hal_camera_default }, vendor_display_pipeline_prop)
++get_prop({ mediacodec hal_graphics_composer_default hal_camera_default vendor_mms }, vendor_media_color_mode_prop)
++get_prop({ mediacodec hal_graphics_composer_default hal_camera_default vendor_mms }, vendor_display_pipeline_prop)
 +set_prop(vendor_init, vendor_camera_pipeline_prop)
 +set_prop(vendor_init, vendor_codec_pipeline_prop)
 +set_prop(vendor_init, vendor_codec_mem_log_prop)
@@ -3166,7 +3187,7 @@ index 0000000000000000000000000000000000000000..afc0d252e97f282100785b6d57036c30
 +neverallow hal_graphics_composer_default vendor_codec_pipeline_prop:file no_rw_file_perms;
 diff --git a/sepolicy/vendor/modem_access.te b/sepolicy/vendor/modem_access.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..6a7617265a50ac36a2b51e6ca609981cb42c9a1c
+index 0000000..6a76172
 --- /dev/null
 +++ b/sepolicy/vendor/modem_access.te
 @@ -0,0 +1,35 @@
@@ -3207,7 +3228,7 @@ index 0000000000000000000000000000000000000000..6a7617265a50ac36a2b51e6ca609981c
 +allowxperm vendor_ccci_mdinit vendor_ccci_ccb_device:chr_file ioctl { 0x433f 0x4340 0x4347 };
 diff --git a/sepolicy/vendor/modem_environment.te b/sepolicy/vendor/modem_environment.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..2a7ce60a7cea58bde9ca230e608305f5aa2be051
+index 0000000..2a7ce60
 --- /dev/null
 +++ b/sepolicy/vendor/modem_environment.te
 @@ -0,0 +1,6 @@
@@ -3219,7 +3240,7 @@ index 0000000000000000000000000000000000000000..2a7ce60a7cea58bde9ca230e608305f5
 +neverallow vendor_ccci_mdinit vendor_para_block_device:blk_file { write append map ioctl };
 diff --git a/sepolicy/vendor/modem_recovery.te b/sepolicy/vendor/modem_recovery.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..f8934c3304e74a12d442310c29fe97f62dfbc99f
+index 0000000..f8934c3
 --- /dev/null
 +++ b/sepolicy/vendor/modem_recovery.te
 @@ -0,0 +1,22 @@
@@ -3247,7 +3268,7 @@ index 0000000000000000000000000000000000000000..f8934c3304e74a12d442310c29fe97f6
 +allow vendor_muxreport vendor_sysfs_ccci_version:file { getattr open read };
 diff --git a/sepolicy/vendor/modem_service_control.te b/sepolicy/vendor/modem_service_control.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..018dc20ab6664789a2cfa24039fde29b46b2dab3
+index 0000000..018dc20
 --- /dev/null
 +++ b/sepolicy/vendor/modem_service_control.te
 @@ -0,0 +1,21 @@
@@ -3274,7 +3295,7 @@ index 0000000000000000000000000000000000000000..018dc20ab6664789a2cfa24039fde29b
 +}:property_service set;
 diff --git a/sepolicy/vendor/nvram_access.te b/sepolicy/vendor/nvram_access.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..bd2c20b40fef3e5b5c865664607f330d24184cc4
+index 0000000..bd2c20b
 --- /dev/null
 +++ b/sepolicy/vendor/nvram_access.te
 @@ -0,0 +1,48 @@
@@ -3328,7 +3349,7 @@ index 0000000000000000000000000000000000000000..bd2c20b40fef3e5b5c865664607f330d
 +allow mediacodec graphics_device:dir search;
 diff --git a/sepolicy/vendor/power_access.te b/sepolicy/vendor/power_access.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..0388eb1b56bb6612d8ad63431b38ddfbdd6bc75d
+index 0000000..0388eb1
 --- /dev/null
 +++ b/sepolicy/vendor/power_access.te
 @@ -0,0 +1,23 @@
@@ -3357,7 +3378,7 @@ index 0000000000000000000000000000000000000000..0388eb1b56bb6612d8ad63431b38ddfb
 +allow vendor_mtkpower vendor_proc_power_tuning:file { open read write };
 diff --git a/sepolicy/vendor/property_contexts b/sepolicy/vendor/property_contexts
 new file mode 100644
-index 0000000000000000000000000000000000000000..fa1a4e15a65e9ac27f806ba7a911f4851e26d96b
+index 0000000..fa1a4e1
 --- /dev/null
 +++ b/sepolicy/vendor/property_contexts
 @@ -0,0 +1,315 @@
@@ -3678,7 +3699,7 @@ index 0000000000000000000000000000000000000000..fa1a4e15a65e9ac27f806ba7a911f485
 +vendor.ril.data.allow_data_slot u:object_r:vendor_ril_data_selection_prop:s0 exact string
 diff --git a/sepolicy/vendor/radio_boot_inventory.te b/sepolicy/vendor/radio_boot_inventory.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..c393c42ed41af93223370568d03b7354f7bc886d
+index 0000000..c393c42
 --- /dev/null
 +++ b/sepolicy/vendor/radio_boot_inventory.te
 @@ -0,0 +1,84 @@
@@ -3768,7 +3789,7 @@ index 0000000000000000000000000000000000000000..c393c42ed41af93223370568d03b7354
 +neverallow appdomain vendor_ril_data_selection_prop:file no_rw_file_perms;
 diff --git a/sepolicy/vendor/radio_mux.te b/sepolicy/vendor/radio_mux.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..b184c971297cc3a218c4368f5c671a91e01a133d
+index 0000000..b184c97
 --- /dev/null
 +++ b/sepolicy/vendor/radio_mux.te
 @@ -0,0 +1,20 @@
@@ -3794,7 +3815,7 @@ index 0000000000000000000000000000000000000000..b184c971297cc3a218c4368f5c671a91
 +allow vendor_init radio_device:dir { create getattr search setattr write remove_name };
 diff --git a/sepolicy/vendor/radio_properties.te b/sepolicy/vendor/radio_properties.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..f9fb4d3da0c5ff3782f36e77dc51a0bc2e995a30
+index 0000000..f9fb4d3
 --- /dev/null
 +++ b/sepolicy/vendor/radio_properties.te
 @@ -0,0 +1,26 @@
@@ -3826,7 +3847,7 @@ index 0000000000000000000000000000000000000000..f9fb4d3da0c5ff3782f36e77dc51a0bc
 +neverallow appdomain vendor_radio_sim_onoff_support_prop:file no_rw_file_perms;
 diff --git a/sepolicy/vendor/runtime_access.te b/sepolicy/vendor/runtime_access.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..e7d6fbadca7b780e7950aed5e6a744e7c0783abe
+index 0000000..e7d6fba
 --- /dev/null
 +++ b/sepolicy/vendor/runtime_access.te
 @@ -0,0 +1,14 @@
@@ -3846,7 +3867,7 @@ index 0000000000000000000000000000000000000000..e7d6fbadca7b780e7950aed5e6a744e7
 +allow vendor_mtkpower vendor_proc_power_control:file { getattr open write };
 diff --git a/sepolicy/vendor/runtime_properties.te b/sepolicy/vendor/runtime_properties.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..a6055a2466dfc940703f16090223bdd8c722d12f
+index 0000000..a6055a2
 --- /dev/null
 +++ b/sepolicy/vendor/runtime_properties.te
 @@ -0,0 +1,79 @@
@@ -3931,7 +3952,7 @@ index 0000000000000000000000000000000000000000..a6055a2466dfc940703f16090223bdd8
 +get_prop(domain, { vendor_composer_hdr_prop vendor_pq_sharpness_prop vendor_audio_shm_status_prop vendor_wifi_version_prop vendor_wlan_nvram_status_prop vendor_connsys_meta_status_prop vendor_connsys_driver_status_prop vendor_powerhal_status_prop vendor_modem_status_prop vendor_nvram_status_prop vendor_teei_capi_status_prop vendor_teei_key_status_prop vendor_ril_mux_start_prop vendor_ril_mux_report_prop vendor_volte_status_prop })
 diff --git a/sepolicy/vendor/storage_maintenance.te b/sepolicy/vendor/storage_maintenance.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..76a4f12f78188850f46d3409221a45393b92f2bd
+index 0000000..76a4f12
 --- /dev/null
 +++ b/sepolicy/vendor/storage_maintenance.te
 @@ -0,0 +1,30 @@
@@ -3967,7 +3988,7 @@ index 0000000000000000000000000000000000000000..76a4f12f78188850f46d3409221a4539
 +}:dir ioctl ~{ FITRIM FIOCLEX FIONCLEX };
 diff --git a/sepolicy/vendor/subsystem_interfaces.te b/sepolicy/vendor/subsystem_interfaces.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..feb1655ac0fe68a162af03f00b757e4e789b6436
+index 0000000..feb1655
 --- /dev/null
 +++ b/sepolicy/vendor/subsystem_interfaces.te
 @@ -0,0 +1,10 @@
@@ -3983,7 +4004,7 @@ index 0000000000000000000000000000000000000000..feb1655ac0fe68a162af03f00b757e4e
 +allow vendor_ccci_fsd vendor_modem_protect_dir:dir { getattr search };
 diff --git a/sepolicy/vendor/thermal_access.te b/sepolicy/vendor/thermal_access.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..23ff6f857c97256a45df7db73fefa83817df32e3
+index 0000000..23ff6f8
 --- /dev/null
 +++ b/sepolicy/vendor/thermal_access.te
 @@ -0,0 +1,22 @@
@@ -4011,7 +4032,7 @@ index 0000000000000000000000000000000000000000..23ff6f857c97256a45df7db73fefa838
 +allow vendor_thermalloadalgod self:netlink_socket { create bind read write };
 diff --git a/sepolicy/vendor/typed_properties.te b/sepolicy/vendor/typed_properties.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..56a29b96d93c9eb8e89fef2953347bd595f9758e
+index 0000000..56a29b9
 --- /dev/null
 +++ b/sepolicy/vendor/typed_properties.te
 @@ -0,0 +1,28 @@
@@ -4043,9 +4064,42 @@ index 0000000000000000000000000000000000000000..56a29b96d93c9eb8e89fef2953347bd5
 +vendor_restricted_prop(vendor_radio_wfc_state_prop)
 +set_prop(vendor_pq, vendor_pq_mdp_color_debug_prop)
 +set_prop(rild, vendor_radio_wfc_state_prop)
+diff --git a/sepolicy/vendor/vendor_mms.te b/sepolicy/vendor/vendor_mms.te
+new file mode 100644
+index 0000000..bbe6e1b
+--- /dev/null
++++ b/sepolicy/vendor/vendor_mms.te
+@@ -0,0 +1,27 @@
++# MediaTek graphics conversion service used by the vendor EGL client library.
++# The stock client contract is app-visible; it is not the telephony MMS API.
++type vendor_mms, domain;
++type vendor_mms_exec, exec_type, vendor_file_type, file_type;
++type vendor_mms_hwservice, hwservice_manager_type;
++init_daemon_domain(vendor_mms)
++hwbinder_use(vendor_mms)
++add_hwservice(vendor_mms, vendor_mms_hwservice)
++
++allow { appdomain -isolated_app } vendor_mms_hwservice:hwservice_manager find;
++binder_call({ appdomain -isolated_app }, vendor_mms)
++binder_call(vendor_mms, { appdomain -isolated_app })
++
++hal_client_domain(vendor_mms, hal_allocator)
++hal_client_domain(vendor_mms, hal_graphics_allocator)
++allow vendor_mms hal_graphics_mapper_hwservice:hwservice_manager find;
++allow vendor_mms same_process_hal_file:file { getattr open read map execute };
++allow vendor_mms ion_device:chr_file { getattr open read ioctl map };
++allowxperm vendor_mms ion_device:chr_file ioctl { 0x4900 0x4901 0x4902 0x4903 0x4904 0x4905 0x4906 0x4907 0x4908 0x4909 };
++allow vendor_mms graphics_device:chr_file { getattr open read write ioctl map };
++allowxperm vendor_mms graphics_device:chr_file ioctl { 0x4600 0x4fc9 0x4fd0 0x5700 0x5701 };
++allow vendor_mms vendor_mtk_cmdq_device:chr_file { open read ioctl };
++allowxperm vendor_mms vendor_mtk_cmdq_device:chr_file ioctl { 0x7801 0x7802 0x7804 0x780b 0x780c 0x7814 0x7815 0x7816 0x7817 0x783d 0x7842 };
++allow vendor_mms vendor_sw_sync_device:chr_file { getattr open read write ioctl };
++allowxperm vendor_mms vendor_sw_sync_device:chr_file ioctl { 0x5700 0x5701 };
++allow vendor_mms vendor_proc_ged:file { getattr open read ioctl };
++allowxperm vendor_mms vendor_proc_ged:file ioctl { 0x6764 0x6765 0x6766 0x6769 };
 diff --git a/sepolicy/vendor/vendor_mtkpower.te b/sepolicy/vendor/vendor_mtkpower.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..2ed9d790a4ba9c81d79b5fea4b89cd59fa94662e
+index 0000000..2ed9d79
 --- /dev/null
 +++ b/sepolicy/vendor/vendor_mtkpower.te
 @@ -0,0 +1,14 @@
@@ -4065,10 +4119,10 @@ index 0000000000000000000000000000000000000000..2ed9d790a4ba9c81d79b5fea4b89cd59
 +binder_call(hal_vendor_mtkpower_client, hal_vendor_mtkpower_server)
 diff --git a/sepolicy/vendor/vendor_pq.te b/sepolicy/vendor/vendor_pq.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..4525fc9fd9f28216ece4a77d3d3ded6834c3f2d0
+index 0000000..0e786df
 --- /dev/null
 +++ b/sepolicy/vendor/vendor_pq.te
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,13 @@
 +hal_attribute(vendor_pq)
 +
 +type vendor_pq, domain;
@@ -4080,10 +4134,11 @@ index 0000000000000000000000000000000000000000..4525fc9fd9f28216ece4a77d3d3ded68
 +hal_attribute_hwservice(hal_vendor_pq, vendor_pq_hwservice)
 +hal_client_domain(hal_graphics_composer_default, hal_vendor_pq)
 +hal_client_domain(hal_camera_default, hal_vendor_pq)
++hal_client_domain(vendor_mms, hal_vendor_pq)
 +binder_call(hal_vendor_pq_client, hal_vendor_pq_server)
 diff --git a/sepolicy/vendor/vendor_services.te b/sepolicy/vendor/vendor_services.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..9a90dba8245ae4d154cdc39a49347670aed868db
+index 0000000..9a90dba
 --- /dev/null
 +++ b/sepolicy/vendor/vendor_services.te
 @@ -0,0 +1,103 @@
@@ -4192,7 +4247,7 @@ index 0000000000000000000000000000000000000000..9a90dba8245ae4d154cdc39a49347670
 +init_daemon_domain(vendor_gsm0710muxd)
 diff --git a/sepolicy/vendor/vendor_startup_helpers.te b/sepolicy/vendor/vendor_startup_helpers.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..12dcfb2bf445f234c3b89793f97d479e74a2d840
+index 0000000..12dcfb2
 --- /dev/null
 +++ b/sepolicy/vendor/vendor_startup_helpers.te
 @@ -0,0 +1,19 @@
@@ -4217,7 +4272,7 @@ index 0000000000000000000000000000000000000000..12dcfb2bf445f234c3b89793f97d479e
 +init_daemon_domain(vendor_bp_kmsetkey_ca)
 diff --git a/sepolicy/vendor/vendor_teei.te b/sepolicy/vendor/vendor_teei.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..02a35d963e146bc3a72ee4744686e9d0551c8f24
+index 0000000..02a35d9
 --- /dev/null
 +++ b/sepolicy/vendor/vendor_teei.te
 @@ -0,0 +1,13 @@
@@ -4236,7 +4291,7 @@ index 0000000000000000000000000000000000000000..02a35d963e146bc3a72ee4744686e9d0
 +set_prop(vendor_teei, vendor_teei_init_prop)
 diff --git a/sepolicy/vendor/vt_properties.te b/sepolicy/vendor/vt_properties.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..3b5ec75edf4299793ba5437b2202e277da5cfde8
+index 0000000..3b5ec75
 --- /dev/null
 +++ b/sepolicy/vendor/vt_properties.te
 @@ -0,0 +1,33 @@
@@ -4275,7 +4330,7 @@ index 0000000000000000000000000000000000000000..3b5ec75edf4299793ba5437b2202e277
 +neverallow appdomain vendor_vt_video_support_prop:file no_rw_file_perms;
 diff --git a/sepolicy/vendor/zz_vendor_hal_extensions.te b/sepolicy/vendor/zz_vendor_hal_extensions.te
 new file mode 100644
-index 0000000000000000000000000000000000000000..b1851980dbdd527ff939737f246a47a0a2707b76
+index 0000000..b185198
 --- /dev/null
 +++ b/sepolicy/vendor/zz_vendor_hal_extensions.te
 @@ -0,0 +1,10 @@
@@ -4290,7 +4345,7 @@ index 0000000000000000000000000000000000000000..b1851980dbdd527ff939737f246a47a0
 +hal_attribute_hwservice(hal_camera, vendor_camera_postproc_hwservice)
 +hal_attribute_hwservice(hal_camera, vendor_camera_atms_hwservice)
 diff --git a/system.prop b/system.prop
-index 85ed5a5672e3afb6c9352a5e38386b4b8cff1cca..a4d5872c932be8a091a598a2d541ca994fd13098 100644
+index 85ed5a5..a4d5872 100644
 --- a/system.prop
 +++ b/system.prop
 @@ -1,4 +1,6 @@
@@ -4321,7 +4376,7 @@ index 85ed5a5672e3afb6c9352a5e38386b4b8cff1cca..a4d5872c932be8a091a598a2d541ca99
  
 diff --git a/tools/README.md b/tools/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..ab7f51273ee2b5dd647907831cb0170ed98f68ab
+index 0000000..ab7f512
 --- /dev/null
 +++ b/tools/README.md
 @@ -0,0 +1,19 @@
@@ -4346,7 +4401,7 @@ index 0000000000000000000000000000000000000000..ab7f51273ee2b5dd647907831cb0170e
 +for export. Use the integration repo's explicit build/verify/install workflow.
 diff --git a/tools/device_audit.py b/tools/device_audit.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..4d18888d3244b5331e6e9053017394cd386d63cd
+index 0000000..4d18888
 --- /dev/null
 +++ b/tools/device_audit.py
 @@ -0,0 +1,812 @@
@@ -5164,7 +5219,7 @@ index 0000000000000000000000000000000000000000..4d18888d3244b5331e6e9053017394cd
 +    sys.exit(main())
 diff --git a/tools/prepare_codec_log_migration.py b/tools/prepare_codec_log_migration.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..89f773539b4bb8a7e868efbeb457b1a20f10cc8f
+index 0000000..89f7735
 --- /dev/null
 +++ b/tools/prepare_codec_log_migration.py
 @@ -0,0 +1,111 @@
@@ -5281,7 +5336,7 @@ index 0000000000000000000000000000000000000000..89f773539b4bb8a7e868efbeb457b1a2
 +    sys.exit(main())
 diff --git a/tools/prepare_media_property_migration.py b/tools/prepare_media_property_migration.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..57a4d55a2f0569e117ec7ff810c26f323ef3545f
+index 0000000..57a4d55
 --- /dev/null
 +++ b/tools/prepare_media_property_migration.py
 @@ -0,0 +1,116 @@
@@ -5403,7 +5458,7 @@ index 0000000000000000000000000000000000000000..57a4d55a2f0569e117ec7ff810c26f32
 +    sys.exit(main())
 diff --git a/tools/prepare_modem_logger_migration.py b/tools/prepare_modem_logger_migration.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..a24264073edff5a8da84445beeaf64e6428a7858
+index 0000000..a242640
 --- /dev/null
 +++ b/tools/prepare_modem_logger_migration.py
 @@ -0,0 +1,151 @@
@@ -5560,7 +5615,7 @@ index 0000000000000000000000000000000000000000..a24264073edff5a8da84445beeaf64e6
 +    sys.exit(main())
 diff --git a/tools/prepare_proinfo_probe_migration.py b/tools/prepare_proinfo_probe_migration.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..0653bf8854d4fc5e6c6875f9b6d101754a259722
+index 0000000..0653bf8
 --- /dev/null
 +++ b/tools/prepare_proinfo_probe_migration.py
 @@ -0,0 +1,213 @@
@@ -5779,7 +5834,7 @@ index 0000000000000000000000000000000000000000..0653bf8854d4fc5e6c6875f9b6d10175
 +    sys.exit(main())
 diff --git a/tools/ril_property_trace.py b/tools/ril_property_trace.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..030bb7ace6d0c462f90d12c9ea0e56ac73975e63
+index 0000000..030bb7a
 --- /dev/null
 +++ b/tools/ril_property_trace.py
 @@ -0,0 +1,83 @@
@@ -5868,7 +5923,7 @@ index 0000000000000000000000000000000000000000..030bb7ace6d0c462f90d12c9ea0e56ac
 +            "caveat": "Attempt names only; neither policy decisions nor successful writes. Workload coverage is not established."}
 diff --git a/tools/selinux_inventory.py b/tools/selinux_inventory.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..c9aaf8c7ef05a21c01ba09c873fa0c7c07fc3748
+index 0000000..c9aaf8c
 --- /dev/null
 +++ b/tools/selinux_inventory.py
 @@ -0,0 +1,134 @@
@@ -6008,7 +6063,7 @@ index 0000000000000000000000000000000000000000..c9aaf8c7ef05a21c01ba09c873fa0c7c
 +    raise SystemExit(main())
 diff --git a/tools/validate_boot_migrations.py b/tools/validate_boot_migrations.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..8c32ac21a2d26ad5482edde32444d408515d13f0
+index 0000000..8c32ac2
 --- /dev/null
 +++ b/tools/validate_boot_migrations.py
 @@ -0,0 +1,65 @@
@@ -6079,7 +6134,7 @@ index 0000000000000000000000000000000000000000..8c32ac21a2d26ad5482edde32444d408
 +    main()
 diff --git a/tools/validate_ecm_export.py b/tools/validate_ecm_export.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..f0b3507514977dc719147ae1b6761cc1bac8cb05
+index 0000000..f0b3507
 --- /dev/null
 +++ b/tools/validate_ecm_export.py
 @@ -0,0 +1,47 @@
@@ -6132,7 +6187,7 @@ index 0000000000000000000000000000000000000000..f0b3507514977dc719147ae1b6761cc1
 +    return {'ecm_private_runtime_symbols': identities, 'ecm_init_publisher_and_gate_markers': True}
 diff --git a/tools/validate_keymaster.py b/tools/validate_keymaster.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..9e29195592b6f67ca4caeea9a4173aea3c4f832b
+index 0000000..9e29195
 --- /dev/null
 +++ b/tools/validate_keymaster.py
 @@ -0,0 +1,119 @@
@@ -6256,7 +6311,7 @@ index 0000000000000000000000000000000000000000..9e29195592b6f67ca4caeea9a4173aea
 +if __name__ == "__main__":
 +    main()
 diff --git a/vendor.prop b/vendor.prop
-index 37d497a2e8576418d9b88dbb54bdc3b73ceefa1d..7051c31cc8a35a0149c2e72fde4b867c7bc6ef8a 100644
+index 37d497a..7051c31 100644
 --- a/vendor.prop
 +++ b/vendor.prop
 @@ -4,8 +4,6 @@ ro.vendor.mtk_audio_ape_support=1

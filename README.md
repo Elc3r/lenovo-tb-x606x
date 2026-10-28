@@ -14,6 +14,7 @@ Settings may display the major version as Android 12.
 | Lifecycle | Sleep/wake, charging and reboot tested |
 | Encryption | FBE, matching hardware Beanpod Keymaster, TWRP decryption with/without PIN |
 | Recovery | Actual flash boot and internal-storage ZIP installation work |
+| DiPlay | CarPlay and forced HEVC playback tested with Enforcing |
 
 One device has been tested. Calls, SMS, VoLTE, emergency/ECM behavior, roaming,
 BIP and long-term stability are **not verified**. Recovery sideload has a known

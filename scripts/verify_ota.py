@@ -173,6 +173,16 @@ def main():
                                      sysread('system_ext/etc/selinux/system_ext_file_contexts'),
                                      read_file(vendor, '/etc/selinux/vendor_file_contexts')])
         policy_result = defaults.verify(root, directory, policy, contexts, vprops, sprops, file_contexts)
+        media = load(Path(__file__).with_name('verify_media.py'), 'media_checks')
+        cil_text = (directory / 'policy.cil').read_text()
+        media_result = media.verify(cil_text, defaults.policy_access(cil_text), file_contexts.decode(),
+                                    read_file(vendor, '/etc/selinux/vendor_hwservice_contexts').decode())
+        for relative in ['bin/hw/vendor.mediatek.hardware.mms@1.5-service',
+                         'etc/init/vendor.mediatek.hardware.mms@1.5-service.rc',
+                         'lib64/hw/vendor.mediatek.hardware.mms@1.5-impl.so']:
+            content = read_file(vendor, '/' + relative)
+            require(content == (vendor_root / relative).read_bytes(), 'Wrong MMS service payload: ' + relative)
+            record('vendor/' + relative, content)
         runtime = directory / 'runtime.apex'
         runtime.write_bytes(sysread('apex/com.android.runtime.apex'))
         runtime_image = directory / 'runtime.img'
@@ -183,7 +193,7 @@ def main():
             record('vendor/' + relative, read_file(vendor, '/' + relative))
     result = {'ota_sha256': hashlib.sha256(package.read_bytes()).hexdigest(),
               'boot_cmdline': command, 'verified_payload_sha256': identities,
-              'policy': policy_result, 'ecm': ecm_result, 'device_tested': False,
+              'policy': policy_result, 'media': media_result, 'ecm': ecm_result, 'device_tested': False,
               'scope': 'full block OTA, selected migrations, Beanpod, ECM private symbols/gates, boot flags, vendor default publication and selected MAC boundaries; not the historical 268-check suite'}
     args.report.parent.mkdir(parents=True, exist_ok=True)
     with args.report.open('x') as report:

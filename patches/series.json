@@ -45,9 +45,9 @@
     "project": "device/lenovo/mt6765-common",
     "base": "1f36ce47ffbfb55838b282f46ce0c46e6f1b0a28",
     "patch": "patches/lineage/06-android_device_lenovo_mt6765-common.patch",
-    "sha256": "4ab0fdf0883ede1d2fd8250ff98b1b7e9ea17b76aa513e3e08a25fa6448017b9",
+    "sha256": "eb7b471609456cda5e1cdd303e2eff79222bad71001a53fae8f99de05d2f9eac",
     "tree": "lineage",
-    "integrated_revision": "f459c4e57cec8ccd7d7e73ff8c2eb51c80842c81"
+    "integrated_revision": "fa834dcbe6f29ae0d3309a3311c1589b2433a3af"
   },
   {
     "project": "device/lenovo/achilles6_row_data",
